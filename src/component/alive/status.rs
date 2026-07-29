@@ -29,10 +29,7 @@ impl Poison {
 
         Self {
             source,
-            tick: Timer::from_seconds(
-                BASE_POISON_PERIOD_SECS / cdr.divisor() as f32,
-                TimerMode::Repeating,
-            ),
+            tick: Timer::from_seconds(BASE_POISON_PERIOD_SECS * cdr.scale(), TimerMode::Repeating),
             total: Timer::new(duration, TimerMode::Once),
         }
     }

@@ -33,8 +33,15 @@ impl Agility {
 pub struct Cdr(pub u16);
 
 impl Cdr {
-    pub fn divisor(&self) -> u16 {
-        // some asymptotic function
-        self.0 + 1
+    pub fn scale(&self) -> f32 {
+        const MAX_REDUCTION: f32 = 0.3;
+        const HALFWAY_POINT: f32 = 15.0;
+
+        let x = self.0 as f32;
+
+        // rational function
+        let f: f32 = x / (x + HALFWAY_POINT);
+
+        1.0 - (MAX_REDUCTION * f)
     }
 }
