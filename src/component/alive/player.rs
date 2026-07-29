@@ -6,3 +6,6 @@ pub struct PlayerMovable {
     pub airborne: bool,
     pub bhop: bool,
 }
+
+#[derive(Component)]
+pub struct Player;

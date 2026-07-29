@@ -6,8 +6,17 @@ use bevy::{
     prelude::{Deref, DerefMut},
 };
 
-#[derive(Component, Deref, DerefMut)]
-pub struct Health(pub u16);
+#[derive(Component)]
+pub struct Health {
+    pub current: u16,
+    pub cap: u16,
+}
+
+impl Health {
+    pub fn new(cap: u16) -> Self {
+        Self { current: cap, cap }
+    }
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Defense(pub i16);

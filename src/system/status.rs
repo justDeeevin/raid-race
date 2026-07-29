@@ -1,6 +1,6 @@
 use crate::component::alive::{
-    status::{Poison, StackableStatusEffect},
     Dps, Health,
+    status::{Poison, StackableStatusEffect},
 };
 use bevy::{
     ecs::{
@@ -23,7 +23,7 @@ pub fn poison(
         if poison.total.is_finished() {
             commands.entity(entity).remove::<Poison>();
         } else if poison.tick.just_finished() {
-            health.0 = health.0.saturating_sub(poison.tick_damage(damagers));
+            health.current = health.current.saturating_sub(poison.tick_damage(damagers));
         }
     }
 }
