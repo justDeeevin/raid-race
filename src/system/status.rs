@@ -1,6 +1,10 @@
-use crate::component::alive::{Dps, Health, status::Poison};
+use crate::component::alive::{
+    Dps, Health,
+    status::{Poison, StackableStatusEffect},
+};
 use bevy::{
     ecs::{
+        component::{Component, Mutable},
         entity::Entity,
         system::{Commands, Query, Res},
     },
@@ -20,6 +24,21 @@ pub fn poison(
             commands.entity(entity).remove::<Poison>();
         } else if poison.tick.just_finished() {
             health.0 = health.0.saturating_sub(poison.tick_damage(damagers));
+        }
+    }
+}
+
+pub fn stat_change<
+    T: Component<Mutability = Mutable> + std::ops::DerefMut<Target = StackableStatusEffect>,
+>(
+    mut commands: Commands,
+    time: Res<Time>,
+    effects: Query<(Entity, &mut T)>,
+) {
+    for (entity, mut effect) in effects {
+        effect.tick(time.delta());
+        if effect.timer().is_finished() {
+            commands.entity(entity).remove::<T>();
         }
     }
 }
