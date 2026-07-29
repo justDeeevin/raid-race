@@ -36,6 +36,7 @@
         dylibs = with pkgs; [
           libxkbcommon
           vulkan-loader
+          wayland
         ];
 
         # Common arguments can be set here to avoid repeating them later
@@ -46,6 +47,7 @@
 
           nativeBuildInputs = with pkgs; [
             pkg-config
+            autoPatchelfHook
           ];
 
           buildInputs =

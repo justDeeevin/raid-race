@@ -11,6 +11,17 @@ bevy = { version = "0.19.0", default-features = false, features = [
 	"dynamic_linking",
 	"scene",
 	"audio",
+	"debug",
+] }
+avian3d = { version = "0.7.0", default-features = false, features = [
+	"3d",
+	"bevy_scene",
+	"collider-from-mesh",
+	"debug-plugin",
+	"f64",
+	"parallel",
+	"parry-f64",
+	"xpbd_joints",
 ] }
 
 [profile.dev]

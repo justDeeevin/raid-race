@@ -1,6 +1,6 @@
 use crate::component::alive::{
-    Dps, Health,
     status::{Poison, StackableStatusEffect},
+    Dps, Health,
 };
 use bevy::{
     ecs::{

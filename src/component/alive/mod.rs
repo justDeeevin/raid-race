@@ -1,3 +1,4 @@
+pub mod player;
 pub mod status;
 
 use bevy::{
@@ -25,13 +26,9 @@ pub struct Luck(pub u8);
 pub struct Agility(pub u8);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct Cdr(u16);
+pub struct Cdr(pub u16);
 
 impl Cdr {
-    pub fn new(cdr: u16) -> Self {
-        Self(cdr)
-    }
-
     pub fn divisor(&self) -> u16 {
         // some asymptotic function
         self.0 + 1
