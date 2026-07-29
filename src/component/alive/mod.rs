@@ -25,6 +25,10 @@ pub struct Luck(pub u8);
 #[derive(Component, Deref, DerefMut)]
 pub struct Agility(pub u8);
 
+impl Agility {
+    pub const MOVE_SPEED_ADJUST: f64 = 0.1;
+}
+
 #[derive(Component, Deref, DerefMut)]
 pub struct Cdr(pub u16);
 

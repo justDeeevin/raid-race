@@ -34,7 +34,9 @@ pub fn movement(
 
             let movement_direction = direction.normalize_or_zero();
             let target_velocity = movement_direction
-                * (WALK_SPEED + (0.1 * agility.map(|a| a.0).unwrap_or_default() as f64));
+                * (WALK_SPEED
+                    + (Agility::MOVE_SPEED_ADJUST
+                        * agility.map(|a| a.0).unwrap_or_default() as f64));
             let blend_time = if movement_direction != Vector::ZERO {
                 ACCELERATION_TIME
             } else {
