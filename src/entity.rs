@@ -24,7 +24,10 @@ pub fn player(
         RigidBody::Dynamic,
         Collider::cuboid(1.0, 1.0, 1.0),
         LockedAxes::ROTATION_LOCKED,
-        PlayerMovable,
+        PlayerMovable {
+            airborne: true,
+            ..Default::default()
+        },
         Health(100),
         Dps(20),
         Agility(10),

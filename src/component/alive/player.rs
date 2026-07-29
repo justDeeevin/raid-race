@@ -1,4 +1,8 @@
 use bevy::ecs::component::Component;
 
-#[derive(Component)]
-pub struct PlayerMovable;
+#[derive(Component, Default)]
+#[non_exhaustive]
+pub struct PlayerMovable {
+    pub airborne: bool,
+    pub bhop: bool,
+}
