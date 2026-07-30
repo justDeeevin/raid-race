@@ -3,7 +3,7 @@ use crate::{
     system::{
         player, spawn,
         status::{poison, stat_change},
-        ui::{health_bar, mana_bar},
+        ui::hud::{self, health_bar, mana_bar},
     },
 };
 use bevy::app::{App, PostStartup, Update};
@@ -29,5 +29,6 @@ pub fn status(app: &mut App) {
 
 pub fn hud(app: &mut App) {
     app.add_systems(PostStartup, spawn::hud)
-        .add_systems(Update, (health_bar, mana_bar));
+        .add_systems(Update, (health_bar, mana_bar))
+        .add_observer(hud::remove_poison);
 }

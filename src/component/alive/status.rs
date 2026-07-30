@@ -3,6 +3,7 @@ use bevy::{
     ecs::{
         component::{Component, Mutable},
         entity::Entity,
+        event::Event,
         lifecycle::HookContext,
         system::Query,
         world::DeferredWorld,
@@ -17,10 +18,16 @@ use std::{
 };
 
 #[derive(Component)]
+#[component(on_remove = Self::on_remove)]
 pub struct Poison {
     source: Entity,
     pub tick: Timer,
     pub total: Timer,
+}
+
+#[derive(Event)]
+pub struct PoisonRemoved {
+    pub from: Entity,
 }
 
 impl Poison {
@@ -42,6 +49,12 @@ impl Poison {
         const BASE_POISON_DPS_DIVISOR: u16 = 20;
 
         (*dps / BASE_POISON_DPS_DIVISOR) * self.tick.duration().as_secs() as u16
+    }
+
+    fn on_remove(mut world: DeferredWorld, context: HookContext) {
+        world.trigger(PoisonRemoved {
+            from: context.entity,
+        });
     }
 }
 

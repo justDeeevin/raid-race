@@ -3,7 +3,7 @@ use crate::component::{
         Agility, Cdr, Dps, Health, Mana, Meter,
         player::{Player, PlayerMovable},
     },
-    ui::{HealthBar, ManaBar},
+    ui::hud::{HealthBar, ManaBar},
 };
 use avian3d::{
     collision::{
@@ -103,7 +103,7 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                                 width: percent(100),
                                 ..Default::default()
                             },
-                            BackgroundColor(Color::srgb_u8(180, 0, 0)),
+                            BackgroundColor(HealthBar::RED),
                             HealthBar(player),
                             Text::default(),
                         ),]
