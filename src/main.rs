@@ -1,56 +1,40 @@
 #![deny(clippy::unwrap_used)]
 
 mod component;
+mod plugin;
 mod scene;
 mod system;
 
 use avian3d::PhysicsPlugins;
 use bevy::{
     DefaultPlugins,
-    app::{PostStartup, Startup, Update},
+    app::{App, PostStartup, Startup},
     scene::SpawnListSystem,
 };
-use component::alive::status::{DefenseDown, DefenseUp, DpsDown, DpsUp};
-use system::status::stat_change;
 
 fn main() {
-    bevy::app::App::new()
+    App::new()
         .add_plugins((
             DefaultPlugins,
             PhysicsPlugins::default(),
-            avian3d::debug_render::PhysicsDebugPlugin,
+            plugin::movement,
+            plugin::status,
+            plugin::hud,
         ))
         .add_systems(Startup, (scene::main.spawn(), system::spawn::player))
-        .add_systems(PostStartup, (system::spawn::hud, setup::setup))
-        .add_systems(
-            Update,
-            (
-                system::status::poison,
-                stat_change::<DefenseUp>,
-                stat_change::<DefenseDown>,
-                stat_change::<DpsUp>,
-                stat_change::<DpsDown>,
-                system::player::movement,
-                system::ui::health_bar,
-                system::ui::mana_bar,
-            ),
-        )
-        .add_observer(system::player::land)
-        .add_observer(system::player::leave_ground)
+        .add_systems(PostStartup, test::setup)
         .run();
 }
 
 #[allow(clippy::unwrap_used, reason = "testing stuff")]
-mod setup {
-    use std::time::Duration;
-
+mod test {
+    use crate::component::alive::{Cdr, player::Player, status::Poison};
     use bevy::ecs::{
         entity::Entity,
         query::With,
         system::{Commands, Query},
     };
-
-    use crate::component::alive::{Cdr, player::Player, status::Poison};
+    use std::time::Duration;
 
     pub fn setup(mut commands: Commands, player: Query<(Entity, &Cdr), With<Player>>) {
         let (player, cdr) = player.single().unwrap();
