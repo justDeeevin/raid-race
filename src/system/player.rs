@@ -169,10 +169,6 @@ pub fn camera(
     motion: Res<AccumulatedMouseMotion>,
     looking: Res<Looking>,
 ) {
-    if !**looking {
-        return;
-    }
-
     const PITCH_SENS: f32 = YAW_SENS;
     const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01;
 
@@ -189,13 +185,15 @@ pub fn camera(
 
         let mut camera = transform.get_mut(camera).expect("Camera has no transform");
 
-        let (yaw, pitch, roll) = camera.rotation.to_euler(EulerRot::YXZ);
-        camera.rotation = Quat::from_euler(
-            EulerRot::YXZ,
-            yaw + delta_yaw,
-            (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT),
-            roll,
-        );
+        if **looking {
+            let (yaw, pitch, roll) = camera.rotation.to_euler(EulerRot::YXZ);
+            camera.rotation = Quat::from_euler(
+                EulerRot::YXZ,
+                yaw + delta_yaw,
+                (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT),
+                roll,
+            );
+        }
         camera.translation =
             target - (camera.forward() * OrbitCamera::ORBIT_DISTANCE) + (camera.rotation * offset);
     }

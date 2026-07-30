@@ -1,11 +1,9 @@
 use avian3d::{collision::collider::Collider, dynamics::rigid_body::RigidBody};
 use bevy::{
     asset::asset_value,
-    camera::visibility::Visibility,
     color::Color,
-    ecs::hierarchy::Children,
     light::PointLight,
-    math::{Quat, primitives::Circle},
+    math::primitives::Cuboid,
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
     scene::{SceneList, bsn_list, template_value},
@@ -15,15 +13,43 @@ use bevy::{
 pub fn main() -> impl SceneList {
     bsn_list![
         (
+            #Floor
             template_value(RigidBody::Static)
-            Collider::cylinder(4.0, 0.0)
-            // shouldn't be necessary but this gets rid of a runtime warning
-            Visibility::Visible
-            Children [
-                Mesh3d(asset_value(Circle::new(4.0)))
-                MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-                Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
-            ]
+            Collider::cuboid(100.0, 1.0, 100.0)
+            Mesh3d(asset_value(Cuboid::new(100.0, 1.0, 100.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #FrontWall
+            template_value(RigidBody::Static)
+            Transform::from_xyz(0.0, 0.5, 50.0)
+            Collider::cuboid(100.0, 4.0, 1.0)
+            Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #LeftWall
+            template_value(RigidBody::Static)
+            Transform::from_xyz(50.0, 0.5, 0.0)
+            Collider::cuboid(1.0, 4.0, 100.0)
+            Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #RightWall
+            template_value(RigidBody::Static)
+            Transform::from_xyz(0.0, 0.5, -50.0)
+            Collider::cuboid(100.0, 4.0, 1.0)
+            Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #BackWall
+            template_value(RigidBody::Static)
+            Transform::from_xyz(-50.0, 0.5, 0.0)
+            Collider::cuboid(1.0, 4.0, 100.0)
+            Mesh3d(asset_value(Cuboid::new(0.0, 4.0, 100.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
         ),
         (
             PointLight {

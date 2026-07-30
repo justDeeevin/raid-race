@@ -62,7 +62,7 @@ pub fn player(
             Dps(20),
             Agility(10),
             Cdr(0),
-            Transform::from_xyz(0.0, 0.1, 0.0),
+            Transform::from_xyz(0.0, HEIGHT as f32, 0.0),
             Player,
             children![
                 (
@@ -84,12 +84,7 @@ pub fn player(
 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(
-            -CAMERA_OFFSET.x,
-            CAMERA_OFFSET.y + (HEIGHT as f32 / 2.0),
-            CAMERA_OFFSET.z - OrbitCamera::ORBIT_DISTANCE,
-        )
-        .looking_to(Dir3::Z, Dir3::Y),
+        Transform::default().looking_to(Dir3::Z, Dir3::Y),
         OrbitCamera {
             target: player,
             offset: CAMERA_OFFSET,

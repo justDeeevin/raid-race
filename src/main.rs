@@ -21,6 +21,7 @@ fn main() {
             plugin::movement,
             plugin::status,
             plugin::hud,
+            avian3d::debug_render::PhysicsDebugPlugin,
         ))
         .add_systems(Startup, (scene::main.spawn(), system::spawn::player))
         .add_systems(Update, system::player::camera)
