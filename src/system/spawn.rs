@@ -7,7 +7,7 @@ use crate::component::{
 };
 use avian3d::{
     collision::{
-        collider::{Collider, CollidingEntities, Sensor},
+        collider::{Collider, Sensor},
         collision_events::CollisionEventsEnabled,
     },
     dynamics::rigid_body::{LockedAxes, RigidBody},
@@ -21,7 +21,7 @@ use bevy::{
         query::With,
         system::{Commands, Query, ResMut},
     },
-    math::primitives::Cuboid,
+    math::primitives::Capsule3d,
     mesh::{Mesh, Mesh3d},
     pbr::{MeshMaterial3d, StandardMaterial},
     text::{FontSize, TextFont},
@@ -37,11 +37,15 @@ pub fn player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    const HEIGHT: f64 = 2.0;
+    const RADIUS: f64 = 0.5;
+    const FOOT_HEIGHT: f64 = 0.01;
+
     commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+        Mesh3d(meshes.add(Capsule3d::new(RADIUS as f32, HEIGHT as f32 / 2.0))),
         MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         RigidBody::Dynamic,
-        Collider::cuboid(1.0, 1.0, 1.0),
+        Collider::capsule(RADIUS, HEIGHT / 2.0),
         LockedAxes::ROTATION_LOCKED,
         PlayerMovable::default(),
         Health(Meter::new(100)),
@@ -55,10 +59,10 @@ pub fn player(
         Transform::from_xyz(0.0, 2.0, 0.0),
         Player,
         children![(
-            Collider::cuboid(1.0, 0.01, 1.0),
+            Collider::cylinder(RADIUS, FOOT_HEIGHT),
             Sensor,
             CollisionEventsEnabled,
-            Transform::from_xyz(0.0, -0.5, 0.0),
+            Transform::from_xyz(0.0, -HEIGHT as f32 / 2.0, 0.0),
         )],
     ));
 }
