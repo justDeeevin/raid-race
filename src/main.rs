@@ -28,6 +28,7 @@ fn main() {
                 stat_change::<DpsDown>,
                 system::player::movement,
                 system::ui::health_bar,
+                system::ui::mana_bar,
             ),
         )
         .run();

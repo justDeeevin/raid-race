@@ -1,9 +1,9 @@
 use crate::component::{
     alive::{
-        Agility, Cdr, Dps, Health,
+        Agility, Cdr, Dps, Health, Mana, Meter,
         player::{Player, PlayerMovable},
     },
-    ui::HealthBar,
+    ui::{HealthBar, ManaBar},
 };
 use avian3d::{
     collision::collider::Collider,
@@ -21,6 +21,7 @@ use bevy::{
     math::primitives::Cuboid,
     mesh::{Mesh, Mesh3d},
     pbr::{MeshMaterial3d, StandardMaterial},
+    text::{FontSize, TextFont},
     transform::components::Transform,
     ui::{
         AlignItems, BackgroundColor, BorderColor, Display, FlexDirection, GridPlacement,
@@ -43,7 +44,11 @@ pub fn player(
             airborne: true,
             ..Default::default()
         },
-        Health::new(100),
+        Health(Meter::new(100)),
+        Mana(Meter {
+            cap: 40,
+            current: 20,
+        }),
         Dps(20),
         Agility(10),
         Cdr(0),
@@ -66,7 +71,7 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                 width: percent(100),
                 display: Display::Grid,
                 grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
-                margin: UiRect::horizontal(vw(3)),
+                margin: UiRect::horizontal(vw(3)).with_bottom(vh(5)),
                 ..Default::default()
             },
             children![(
@@ -74,29 +79,53 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                     grid_column: GridPlacement::start(1),
                     flex_direction: FlexDirection::ColumnReverse,
                     justify_content: JustifyContent::Start,
-                    align_items: AlignItems::End,
+                    align_items: AlignItems::Start,
                     ..Default::default()
                 },
-                children![(
-                    Node {
-                        height: vh(4),
-                        width: percent(100),
-                        border: UiRect::all(px(4)),
-                        margin: UiRect::bottom(vh(5)),
-                        ..Default::default()
-                    },
-                    BorderColor::all(Color::BLACK),
-                    children![(
+                children![
+                    (
                         Node {
-                            height: percent(100),
+                            height: vh(4),
                             width: percent(100),
+                            border: UiRect::all(px(4)),
                             ..Default::default()
                         },
-                        BackgroundColor(Color::srgb_u8(180, 0, 0)),
-                        HealthBar(player),
-                        Text::default(),
-                    ),]
-                )]
+                        BorderColor::all(Color::BLACK),
+                        children![(
+                            Node {
+                                height: percent(100),
+                                width: percent(100),
+                                ..Default::default()
+                            },
+                            BackgroundColor(Color::srgb_u8(180, 0, 0)),
+                            HealthBar(player),
+                            Text::default(),
+                        ),]
+                    ),
+                    (
+                        Node {
+                            height: vh(2),
+                            width: percent(80),
+                            border: UiRect::all(px(3)),
+                            ..Default::default()
+                        },
+                        BorderColor::all(Color::BLACK),
+                        children![(
+                            Node {
+                                height: percent(100),
+                                width: percent(100),
+                                ..Default::default()
+                            },
+                            BackgroundColor(Color::srgb_u8(0, 0, 255)),
+                            ManaBar(player),
+                            Text::default(),
+                            TextFont {
+                                font_size: FontSize::Px(15.0),
+                                ..Default::default()
+                            }
+                        )]
+                    )
+                ]
             )]
         ),],
     ));

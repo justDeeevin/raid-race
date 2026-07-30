@@ -6,23 +6,28 @@ use bevy::{
     prelude::{Deref, DerefMut},
 };
 
-#[derive(Component)]
-pub struct Health {
-    pub current: u16,
-    pub cap: u16,
-}
-
-impl Health {
-    pub fn new(cap: u16) -> Self {
-        Self { current: cap, cap }
-    }
-}
+#[derive(Component, Deref, DerefMut)]
+pub struct Health(pub Meter<u16>);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Defense(pub i16);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct Mana(pub u16);
+pub struct Mana(pub Meter<u16>);
+
+pub struct Meter<T> {
+    pub current: T,
+    pub cap: T,
+}
+
+impl<T: Clone> Meter<T> {
+    pub fn new(cap: T) -> Self {
+        Self {
+            current: cap.clone(),
+            cap,
+        }
+    }
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Dps(pub u16);
