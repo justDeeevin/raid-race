@@ -1,5 +1,6 @@
 use crate::{
     component::alive::status::{DefenseDown, DefenseUp, DpsDown, DpsUp},
+    resource::Looking,
     system::{
         player, spawn,
         status::{poison, stat_change},
@@ -9,9 +10,10 @@ use crate::{
 use bevy::app::{App, PostStartup, Update};
 
 pub fn movement(app: &mut App) {
-    app.add_systems(Update, player::movement)
+    app.add_systems(Update, (player::movement, player::rotate, player::grabber))
         .add_observer(player::land)
-        .add_observer(player::leave_ground);
+        .add_observer(player::leave_ground)
+        .init_resource::<Looking>();
 }
 
 pub fn status(app: &mut App) {

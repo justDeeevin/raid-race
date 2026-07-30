@@ -2,13 +2,14 @@
 
 mod component;
 mod plugin;
+mod resource;
 mod scene;
 mod system;
 
 use avian3d::PhysicsPlugins;
 use bevy::{
     DefaultPlugins,
-    app::{App, PostStartup, Startup},
+    app::{App, PostStartup, Startup, Update},
     scene::SpawnListSystem,
 };
 
@@ -22,6 +23,7 @@ fn main() {
             plugin::hud,
         ))
         .add_systems(Startup, (scene::main.spawn(), system::spawn::player))
+        .add_systems(Update, system::player::camera)
         .add_systems(PostStartup, test::setup)
         .run();
 }

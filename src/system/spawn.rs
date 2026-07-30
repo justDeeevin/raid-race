@@ -1,4 +1,5 @@
 use crate::component::{
+    OrbitCamera,
     alive::{
         Agility, Cdr, Dps, Health, Mana, Meter,
         player::{Player, PlayerMovable},
@@ -14,6 +15,7 @@ use avian3d::{
 };
 use bevy::{
     asset::Assets,
+    camera::Camera3d,
     color::Color,
     ecs::{
         children,
@@ -21,7 +23,10 @@ use bevy::{
         query::With,
         system::{Commands, Query, ResMut},
     },
-    math::primitives::Capsule3d,
+    math::{
+        Dir3, Vec3,
+        primitives::{Capsule3d, Cuboid},
+    },
     mesh::{Mesh, Mesh3d},
     pbr::{MeshMaterial3d, StandardMaterial},
     text::{FontSize, TextFont},
@@ -41,29 +46,54 @@ pub fn player(
     const RADIUS: f64 = 0.5;
     const FOOT_HEIGHT: f64 = 0.01;
 
+    let player = commands
+        .spawn((
+            Mesh3d(meshes.add(Capsule3d::new(RADIUS as f32, HEIGHT as f32 / 2.0))),
+            MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+            RigidBody::Dynamic,
+            Collider::capsule(RADIUS, HEIGHT / 2.0),
+            LockedAxes::ROTATION_LOCKED,
+            PlayerMovable::default(),
+            Health(Meter::new(100)),
+            Mana(Meter {
+                cap: 40,
+                current: 20,
+            }),
+            Dps(20),
+            Agility(10),
+            Cdr(0),
+            Transform::from_xyz(0.0, 0.1, 0.0),
+            Player,
+            children![
+                (
+                    Mesh3d(meshes.add(Cuboid::new(0.1, 0.1, 0.5))),
+                    MeshMaterial3d(materials.add(Color::WHITE)),
+                    Transform::from_xyz(0.0, 0.6, 0.5),
+                ),
+                (
+                    Collider::cylinder(RADIUS, FOOT_HEIGHT),
+                    Sensor,
+                    CollisionEventsEnabled,
+                    Transform::from_xyz(0.0, -HEIGHT as f32 / 2.0, 0.0),
+                )
+            ],
+        ))
+        .id();
+
+    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
+
     commands.spawn((
-        Mesh3d(meshes.add(Capsule3d::new(RADIUS as f32, HEIGHT as f32 / 2.0))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-        RigidBody::Dynamic,
-        Collider::capsule(RADIUS, HEIGHT / 2.0),
-        LockedAxes::ROTATION_LOCKED,
-        PlayerMovable::default(),
-        Health(Meter::new(100)),
-        Mana(Meter {
-            cap: 40,
-            current: 20,
-        }),
-        Dps(20),
-        Agility(10),
-        Cdr(0),
-        Transform::from_xyz(0.0, 2.0, 0.0),
-        Player,
-        children![(
-            Collider::cylinder(RADIUS, FOOT_HEIGHT),
-            Sensor,
-            CollisionEventsEnabled,
-            Transform::from_xyz(0.0, -HEIGHT as f32 / 2.0, 0.0),
-        )],
+        Camera3d::default(),
+        Transform::from_xyz(
+            -CAMERA_OFFSET.x,
+            CAMERA_OFFSET.y + (HEIGHT as f32 / 2.0),
+            CAMERA_OFFSET.z - OrbitCamera::ORBIT_DISTANCE,
+        )
+        .looking_to(Dir3::Z, Dir3::Y),
+        OrbitCamera {
+            target: player,
+            offset: CAMERA_OFFSET,
+        },
     ));
 }
 
@@ -73,70 +103,91 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
         Node {
             width: percent(100),
             height: percent(100),
-            align_items: AlignItems::End,
+            display: Display::Grid,
+            grid_template_rows: vec![RepeatedGridTrack::fr(3, 1.0)],
+            grid_template_columns: vec![RepeatedGridTrack::percent(1, 100.0)],
             ..Default::default()
         },
-        children![(
-            Node {
-                width: percent(100),
-                display: Display::Grid,
-                grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
-                margin: UiRect::horizontal(vw(3)).with_bottom(vh(5)),
-                ..Default::default()
-            },
-            children![(
+        children![
+            (
                 Node {
-                    grid_column: GridPlacement::start(1),
-                    flex_direction: FlexDirection::ColumnReverse,
-                    justify_content: JustifyContent::Start,
-                    align_items: AlignItems::Start,
+                    grid_row: GridPlacement::start(2),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
                     ..Default::default()
                 },
-                children![
-                    (
-                        Node {
-                            height: vh(4),
-                            width: percent(100),
-                            border: UiRect::all(px(4)),
-                            ..Default::default()
-                        },
-                        BorderColor::all(Color::BLACK),
-                        children![(
+                children![(
+                    Node {
+                        height: px(10),
+                        width: px(10),
+                        ..Default::default()
+                    },
+                    BackgroundColor(Color::BLACK)
+                )]
+            ),
+            (
+                Node {
+                    width: percent(100),
+                    display: Display::Grid,
+                    grid_row: GridPlacement::start(3),
+                    grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
+                    margin: UiRect::horizontal(vw(3)).with_bottom(vh(5)),
+                    ..Default::default()
+                },
+                children![(
+                    Node {
+                        grid_column: GridPlacement::start(1),
+                        flex_direction: FlexDirection::ColumnReverse,
+                        justify_content: JustifyContent::End,
+                        align_items: AlignItems::Start,
+                        ..Default::default()
+                    },
+                    children![
+                        (
                             Node {
-                                height: percent(100),
+                                height: vh(4),
                                 width: percent(100),
+                                border: UiRect::all(px(4)),
                                 ..Default::default()
                             },
-                            BackgroundColor(HealthBar::RED),
-                            HealthBar(player),
-                            Text::default(),
-                        ),]
-                    ),
-                    (
-                        Node {
-                            height: vh(2),
-                            width: percent(80),
-                            border: UiRect::all(px(3)),
-                            ..Default::default()
-                        },
-                        BorderColor::all(Color::BLACK),
-                        children![(
+                            BorderColor::all(Color::BLACK),
+                            children![(
+                                Node {
+                                    height: percent(100),
+                                    width: percent(100),
+                                    ..Default::default()
+                                },
+                                BackgroundColor(HealthBar::RED),
+                                HealthBar(player),
+                                Text::default(),
+                            ),]
+                        ),
+                        (
                             Node {
-                                height: percent(100),
-                                width: percent(100),
+                                height: vh(2),
+                                width: percent(80),
+                                border: UiRect::all(px(3)),
                                 ..Default::default()
                             },
-                            BackgroundColor(Color::srgb_u8(0, 0, 255)),
-                            ManaBar(player),
-                            Text::default(),
-                            TextFont {
-                                font_size: FontSize::Px(15.0),
-                                ..Default::default()
-                            }
-                        )]
-                    )
-                ]
-            )]
-        ),],
+                            BorderColor::all(Color::BLACK),
+                            children![(
+                                Node {
+                                    height: percent(100),
+                                    width: percent(100),
+                                    ..Default::default()
+                                },
+                                BackgroundColor(Color::srgb_u8(0, 0, 255)),
+                                ManaBar(player),
+                                Text::default(),
+                                TextFont {
+                                    font_size: FontSize::Px(15.0),
+                                    ..Default::default()
+                                }
+                            )]
+                        )
+                    ]
+                )]
+            ),
+        ],
     ));
 }

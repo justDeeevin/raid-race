@@ -1,11 +1,11 @@
 use avian3d::{collision::collider::Collider, dynamics::rigid_body::RigidBody};
 use bevy::{
     asset::asset_value,
-    camera::{Camera3d, visibility::Visibility},
+    camera::visibility::Visibility,
     color::Color,
     ecs::hierarchy::Children,
     light::PointLight,
-    math::{Quat, Vec3, primitives::Circle},
+    math::{Quat, primitives::Circle},
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
     scene::{SceneList, bsn_list, template_value},
@@ -31,9 +31,5 @@ pub fn main() -> impl SceneList {
             }
             Transform::from_xyz(4.0, 8.0, 4.0)
         ),
-        (
-            Camera3d
-            template_value(Transform::from_xyz(-2.5, 4.5, -9.0).looking_at(Vec3::ZERO, Vec3::Y))
-        )
     ]
 }

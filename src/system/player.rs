@@ -1,4 +1,10 @@
-use crate::component::alive::{Agility, player::PlayerMovable};
+use crate::{
+    component::{
+        OrbitCamera,
+        alive::{Agility, player::PlayerMovable},
+    },
+    resource::Looking,
+};
 use avian3d::{
     collision::{
         collider::Sensor,
@@ -9,21 +15,34 @@ use avian3d::{
 };
 use bevy::{
     ecs::{
+        entity::Entity,
         hierarchy::ChildOf,
         observer::On,
         query::With,
-        system::{Query, Res},
+        system::{Query, Res, ResMut},
     },
-    input::{ButtonInput, keyboard::KeyCode},
+    input::{
+        ButtonInput,
+        keyboard::KeyCode,
+        mouse::{AccumulatedMouseMotion, MouseButton},
+    },
+    math::{EulerRot, Quat},
     time::Time,
+    transform::components::Transform,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 
 pub fn movement(
-    query: Query<(&mut LinearVelocity, Option<&Agility>, &mut PlayerMovable)>,
+    query: Query<(
+        &mut LinearVelocity,
+        &Transform,
+        Option<&Agility>,
+        &mut PlayerMovable,
+    )>,
     input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
-    for (mut velocity, agility, mut state) in query {
+    for (mut velocity, transform, agility, mut state) in query {
         // Walking
         {
             const WALK_SPEED: f64 = 5.0;
@@ -44,7 +63,10 @@ pub fn movement(
                 direction.x -= 1.0
             }
 
-            let movement_direction = direction.normalize_or_zero();
+            let movement_direction = transform
+                .rotation
+                .as_dquat()
+                .mul_vec3(direction.normalize_or_zero());
             let target_velocity = movement_direction
                 * (WALK_SPEED
                     + (Agility::MOVE_SPEED_ADJUST
@@ -119,4 +141,84 @@ pub fn leave_ground(
         tracing::warn!("Double leaving ground");
     }
     state.airborne = true;
+}
+
+const YAW_SENS: f32 = 0.003;
+
+pub fn rotate(
+    motion: Res<AccumulatedMouseMotion>,
+    transform: Query<&mut Transform, With<PlayerMovable>>,
+    looking: Res<Looking>,
+) {
+    if !**looking {
+        return;
+    }
+
+    let delta = -motion.delta;
+    let delta_yaw = delta.x * YAW_SENS;
+
+    for mut transform in transform {
+        let (yaw, pitch, roll) = transform.rotation.to_euler(EulerRot::YXZ);
+        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw + delta_yaw, pitch, roll);
+    }
+}
+
+pub fn camera(
+    mut transform: Query<&mut Transform>,
+    camera: Query<(Entity, &OrbitCamera)>,
+    motion: Res<AccumulatedMouseMotion>,
+    looking: Res<Looking>,
+) {
+    if !**looking {
+        return;
+    }
+
+    const PITCH_SENS: f32 = YAW_SENS;
+    const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01;
+
+    let delta = -motion.delta;
+
+    let delta_pitch = delta.y * PITCH_SENS;
+    let delta_yaw = delta.x * YAW_SENS;
+
+    for (camera, OrbitCamera { target, offset }) in camera {
+        let target = transform
+            .get(*target)
+            .expect("Orbit camera target not found")
+            .translation;
+
+        let mut camera = transform.get_mut(camera).expect("Camera has no transform");
+
+        let (yaw, pitch, roll) = camera.rotation.to_euler(EulerRot::YXZ);
+        camera.rotation = Quat::from_euler(
+            EulerRot::YXZ,
+            yaw + delta_yaw,
+            (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT),
+            roll,
+        );
+        camera.translation =
+            target - (camera.forward() * OrbitCamera::ORBIT_DISTANCE) + (camera.rotation * offset);
+    }
+}
+
+pub fn grabber(
+    click: Res<ButtonInput<MouseButton>>,
+    key: Res<ButtonInput<KeyCode>>,
+    mut looking: ResMut<Looking>,
+    mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
+) {
+    #[allow(clippy::unwrap_used, reason = "statically safe")]
+    let mut options = options.single_mut().unwrap();
+
+    if **looking {
+        if key.just_pressed(KeyCode::Escape) {
+            **looking = false;
+            options.grab_mode = CursorGrabMode::None;
+            options.visible = true;
+        }
+    } else if click.just_pressed(MouseButton::Left) {
+        **looking = true;
+        options.grab_mode = CursorGrabMode::Locked;
+        options.visible = false;
+    }
 }
