@@ -15,7 +15,11 @@ use system::status::stat_change;
 
 fn main() {
     bevy::app::App::new()
-        .add_plugins((DefaultPlugins, PhysicsPlugins::default()))
+        .add_plugins((
+            DefaultPlugins,
+            PhysicsPlugins::default(),
+            avian3d::debug_render::PhysicsDebugPlugin,
+        ))
         .add_systems(Startup, (scene::main.spawn(), system::spawn::player))
         .add_systems(PostStartup, (system::spawn::hud, setup::setup))
         .add_systems(
@@ -31,6 +35,8 @@ fn main() {
                 system::ui::mana_bar,
             ),
         )
+        .add_observer(system::player::land)
+        .add_observer(system::player::leave_ground)
         .run();
 }
 

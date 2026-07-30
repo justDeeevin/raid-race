@@ -20,6 +20,7 @@ avian3d = { version = "0.7.0", default-features = false, features = [
 	"parry-f64",
 	"xpbd_joints",
 ] }
+tracing = "0.1.44"
 
 [profile.dev]
 opt-level = 1

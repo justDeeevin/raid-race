@@ -1,7 +1,19 @@
 use crate::component::alive::{Agility, player::PlayerMovable};
-use avian3d::{dynamics::rigid_body::LinearVelocity, math::Vector};
+use avian3d::{
+    collision::{
+        collider::Sensor,
+        collision_events::{CollisionEnd, CollisionStart},
+    },
+    dynamics::rigid_body::LinearVelocity,
+    math::Vector,
+};
 use bevy::{
-    ecs::system::{Query, Res},
+    ecs::{
+        hierarchy::ChildOf,
+        observer::On,
+        query::With,
+        system::{Query, Res},
+    },
     input::{ButtonInput, keyboard::KeyCode},
     time::Time,
 };
@@ -65,13 +77,46 @@ pub fn movement(
                 } else {
                     if input.just_pressed(KeyCode::Space) {
                         velocity.y = JUMP_SPEED;
-                        state.airborne = true;
                         state.bhop = true;
                     }
                 }
-            } else if velocity.y < 0.0 {
-                state.airborne = false;
             }
         }
     }
+}
+
+pub fn land(
+    collision: On<CollisionStart>,
+    mut state: Query<&mut PlayerMovable>,
+    sensor: Query<&ChildOf, With<Sensor>>,
+) {
+    let Ok(ChildOf(player)) = sensor.get(collision.collider1) else {
+        return;
+    };
+    let mut state = state
+        .get_mut(*player)
+        .expect("Player not found for landing");
+
+    if !state.airborne {
+        tracing::warn!("Double landing");
+    }
+    state.airborne = false;
+}
+
+pub fn leave_ground(
+    collision: On<CollisionEnd>,
+    mut state: Query<&mut PlayerMovable>,
+    sensor: Query<&ChildOf, With<Sensor>>,
+) {
+    let Ok(ChildOf(player)) = sensor.get(collision.collider1) else {
+        return;
+    };
+    let mut state = state
+        .get_mut(*player)
+        .expect("Player not found for leaving ground");
+
+    if state.airborne {
+        tracing::warn!("Double leaving ground");
+    }
+    state.airborne = true;
 }

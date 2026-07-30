@@ -6,7 +6,10 @@ use crate::component::{
     ui::{HealthBar, ManaBar},
 };
 use avian3d::{
-    collision::collider::Collider,
+    collision::{
+        collider::{Collider, CollidingEntities, Sensor},
+        collision_events::CollisionEventsEnabled,
+    },
     dynamics::rigid_body::{LockedAxes, RigidBody},
 };
 use bevy::{
@@ -40,10 +43,7 @@ pub fn player(
         RigidBody::Dynamic,
         Collider::cuboid(1.0, 1.0, 1.0),
         LockedAxes::ROTATION_LOCKED,
-        PlayerMovable {
-            airborne: true,
-            ..Default::default()
-        },
+        PlayerMovable::default(),
         Health(Meter::new(100)),
         Mana(Meter {
             cap: 40,
@@ -54,6 +54,12 @@ pub fn player(
         Cdr(0),
         Transform::from_xyz(0.0, 2.0, 0.0),
         Player,
+        children![(
+            Collider::cuboid(1.0, 0.01, 1.0),
+            Sensor,
+            CollisionEventsEnabled,
+            Transform::from_xyz(0.0, -0.5, 0.0),
+        )],
     ));
 }
 
