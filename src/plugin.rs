@@ -10,10 +10,16 @@ use crate::{
 use bevy::app::{App, PostStartup, Update};
 
 pub fn movement(app: &mut App) {
-    app.add_systems(Update, (player::movement, player::rotate, player::grabber))
-        .add_observer(player::land)
-        .add_observer(player::leave_ground)
-        .init_resource::<Looking>();
+    app.add_systems(
+        Update,
+        (
+            player::movement,
+            player::rotate,
+            player::grabber,
+            player::grounded,
+        ),
+    )
+    .init_resource::<Looking>();
 }
 
 pub fn status(app: &mut App) {

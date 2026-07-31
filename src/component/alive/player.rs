@@ -1,20 +1,10 @@
 use bevy::ecs::component::Component;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 #[non_exhaustive]
 pub struct PlayerMovable {
-    pub airborne: bool,
+    pub ground_contacts: u128,
     pub bhop: bool,
-}
-
-impl Default for PlayerMovable {
-    fn default() -> Self {
-        Self {
-            // if spawned grounded, will be set by sensor
-            airborne: true,
-            bhop: false,
-        }
-    }
 }
 
 #[derive(Component)]

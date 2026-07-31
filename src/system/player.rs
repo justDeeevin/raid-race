@@ -6,10 +6,7 @@ use crate::{
     resource::Looking,
 };
 use avian3d::{
-    collision::{
-        collider::Sensor,
-        collision_events::{CollisionEnd, CollisionStart},
-    },
+    collision::{collider::Sensor, contact_types::Collisions},
     dynamics::rigid_body::LinearVelocity,
     math::Vector,
 };
@@ -17,7 +14,6 @@ use bevy::{
     ecs::{
         entity::Entity,
         hierarchy::ChildOf,
-        observer::On,
         query::With,
         system::{Query, Res, ResMut},
     },
@@ -91,7 +87,7 @@ pub fn movement(
         {
             const JUMP_SPEED: f64 = 3.0;
 
-            if !state.airborne {
+            if state.ground_contacts != 0 {
                 if state.bhop {
                     if !input.pressed(KeyCode::Space) {
                         state.bhop = false;
@@ -107,40 +103,26 @@ pub fn movement(
     }
 }
 
-pub fn land(
-    collision: On<CollisionStart>,
+pub fn grounded(
+    collisions: Collisions,
     mut state: Query<&mut PlayerMovable>,
-    sensor: Query<&ChildOf, With<Sensor>>,
+    sensors: Query<(Entity, &ChildOf), With<Sensor>>,
 ) {
-    let Ok(ChildOf(player)) = sensor.get(collision.collider1) else {
-        return;
-    };
-    let mut state = state
-        .get_mut(*player)
-        .expect("Player not found for landing");
+    const MIN_GROUND_ANGLE: f64 = 30_f64.to_radians();
 
-    if !state.airborne {
-        tracing::warn!("Double landing");
+    for (sensor, ChildOf(parent)) in sensors {
+        let Ok(mut state) = state.get_mut(*parent) else {
+            continue;
+        };
+        state.ground_contacts = 0;
+        if collisions.collisions_with(sensor).any(|c| {
+            c.manifolds
+                .iter()
+                .any(|m| m.normal.dot(Vector::Y).abs() >= MIN_GROUND_ANGLE.sin())
+        }) {
+            state.ground_contacts += 1;
+        }
     }
-    state.airborne = false;
-}
-
-pub fn leave_ground(
-    collision: On<CollisionEnd>,
-    mut state: Query<&mut PlayerMovable>,
-    sensor: Query<&ChildOf, With<Sensor>>,
-) {
-    let Ok(ChildOf(player)) = sensor.get(collision.collider1) else {
-        return;
-    };
-    let mut state = state
-        .get_mut(*player)
-        .expect("Player not found for leaving ground");
-
-    if state.airborne {
-        tracing::warn!("Double leaving ground");
-    }
-    state.airborne = true;
 }
 
 const YAW_SENS: f32 = 0.003;

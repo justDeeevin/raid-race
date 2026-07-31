@@ -43,15 +43,18 @@ pub fn player(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     const HEIGHT: f64 = 2.0;
+    // -- DON'T CHANGE --
+    const CAPSULE_LENGTH: f64 = HEIGHT - (RADIUS * 2.0);
+    // -------------------
     const RADIUS: f64 = 0.5;
-    const FOOT_HEIGHT: f64 = 0.01;
+    const FOOT_HEIGHT: f64 = 0.02;
 
     let player = commands
         .spawn((
-            Mesh3d(meshes.add(Capsule3d::new(RADIUS as f32, HEIGHT as f32 / 2.0))),
+            Mesh3d(meshes.add(Capsule3d::new(RADIUS as f32, CAPSULE_LENGTH as f32))),
             MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
             RigidBody::Dynamic,
-            Collider::capsule(RADIUS, HEIGHT / 2.0),
+            Collider::capsule(RADIUS, CAPSULE_LENGTH),
             LockedAxes::ROTATION_LOCKED,
             PlayerMovable::default(),
             Health(Meter::new(100)),
@@ -62,7 +65,7 @@ pub fn player(
             Dps(20),
             Agility(10),
             Cdr(0),
-            Transform::from_xyz(0.0, HEIGHT as f32, 0.0),
+            Transform::from_xyz(0.0, CAPSULE_LENGTH as f32 / 2.0, 0.0),
             Player,
             children![
                 (
@@ -74,7 +77,7 @@ pub fn player(
                     Collider::cylinder(RADIUS, FOOT_HEIGHT),
                     Sensor,
                     CollisionEventsEnabled,
-                    Transform::from_xyz(0.0, -HEIGHT as f32 / 2.0, 0.0),
+                    Transform::from_xyz(0.0, ((-HEIGHT - FOOT_HEIGHT) / 2.0) as f32, 0.0),
                 )
             ],
         ))
