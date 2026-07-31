@@ -96,20 +96,30 @@ pub fn player(
 }
 
 pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
+    const N_ROWS: u16 = {
+        // -- change this --
+        let n = 3;
+        // -----------------
+        assert!(n % 2 == 1, "N_ROWS must be odd");
+        n
+    };
+
     let player = player.single().expect("Could not find just one player");
     commands.spawn((
+        // Screen
         Node {
             width: percent(100),
             height: percent(100),
             display: Display::Grid,
-            grid_template_rows: vec![RepeatedGridTrack::fr(3, 1.0)],
+            grid_template_rows: vec![RepeatedGridTrack::fr(N_ROWS, 1.0)],
             grid_template_columns: vec![RepeatedGridTrack::percent(1, 100.0)],
             ..Default::default()
         },
         children![
             (
+                // Crosshair
                 Node {
-                    grid_row: GridPlacement::start(2),
+                    grid_row: GridPlacement::start((N_ROWS as i16 / 2) + 1),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     ..Default::default()
@@ -124,15 +134,17 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                 )]
             ),
             (
+                // Bottom row
                 Node {
                     width: percent(100),
                     display: Display::Grid,
-                    grid_row: GridPlacement::start(3),
+                    grid_row: GridPlacement::start(-2),
                     grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
                     margin: UiRect::horizontal(vw(3)).with_bottom(vh(5)),
                     ..Default::default()
                 },
                 children![(
+                    // Bars
                     Node {
                         grid_column: GridPlacement::start(1),
                         flex_direction: FlexDirection::ColumnReverse,
@@ -142,6 +154,7 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                     },
                     children![
                         (
+                            // Health
                             Node {
                                 height: vh(4),
                                 width: percent(100),
@@ -161,6 +174,7 @@ pub fn hud(mut commands: Commands, player: Query<Entity, With<Player>>) {
                             ),]
                         ),
                         (
+                            // Mana
                             Node {
                                 height: vh(2),
                                 width: percent(80),
