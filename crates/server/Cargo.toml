@@ -1,0 +1,18 @@
+[package]
+name = "raid-race-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+raid-race-lib = { workspace = true, features = ["server"] }
+naia-bevy-server = { git = "https://github.com/getong/naia", branch = "bevy-0.19", features = [
+	"transport_webrtc",
+] }
+bevy.workspace = true
+avian3d.workspace = true
+tracing.workspace = true
+typed-builder = "0.23.2"
+hakari = { version = "0.1", path = "../hakari" }
+
+[lints]
+workspace = true

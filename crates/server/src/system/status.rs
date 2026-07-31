@@ -1,7 +1,3 @@
-use crate::component::alive::{
-    Dps, Health,
-    status::{Poison, StackableStatusEffect},
-};
 use bevy::{
     ecs::{
         component::{Component, Mutable},
@@ -9,6 +5,10 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     time::Time,
+};
+use raid_race_lib::component::alive::{
+    Dps, Health,
+    status::{Poison, StackableStatusEffect},
 };
 
 pub fn poison(

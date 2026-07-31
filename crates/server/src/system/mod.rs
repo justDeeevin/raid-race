@@ -1,4 +1,3 @@
 pub mod player;
-pub mod spawn;
+pub mod server;
 pub mod status;
-pub mod ui;

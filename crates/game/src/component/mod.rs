@@ -1,4 +1,3 @@
-pub mod alive;
 pub mod ui;
 
 use bevy::{

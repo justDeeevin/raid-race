@@ -1,26 +1,33 @@
-[package]
-name = "raid-race"
+[workspace]
+metadata.crane.name = "raid-race"
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[workspace.dependencies]
+raid-race-lib = { path = "crates/lib" }
+tracing = "0.1.44"
 bevy = { version = "0.19.0", default-features = false, features = [
-	"3d",
-	"audio",
-	"dynamic_linking",
-	"ui",
+	"bevy_asset",
+	"bevy_color",
+	"bevy_mesh",
+	"bevy_pbr",
+	"bevy_scene",
+	"debug",
 ] }
 avian3d = { version = "0.7.0", default-features = false, features = [
 	"3d",
-	"bevy_scene",
-	"collider-from-mesh",
-	"debug-plugin",
 	"f64",
 	"parallel",
 	"parry-f64",
 	"xpbd_joints",
 ] }
-tracing = "0.1.44"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
 
 [profile.dev]
 opt-level = 1

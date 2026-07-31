@@ -1,24 +1,22 @@
-use super::{Cdr, Defense, Dps};
+#[cfg(feature = "server")]
+use super::Defense;
+#[cfg(feature = "server")]
+use bevy::ecs::component::Mutable;
+#[cfg(any(feature = "client", feature = "server"))]
+use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+#[cfg(feature = "server")]
+use std::ops::{AddAssign, Deref, DerefMut, SubAssign};
+
+use super::{Cdr, Dps};
 use bevy::{
-    ecs::{
-        component::{Component, Mutable},
-        entity::Entity,
-        event::Event,
-        lifecycle::HookContext,
-        system::Query,
-        world::DeferredWorld,
-    },
+    ecs::{component::Component, entity::Entity, event::Event, system::Query},
     prelude::{Deref, DerefMut},
     time::{Timer, TimerMode},
 };
-use std::{
-    num::NonZero,
-    ops::{AddAssign, DerefMut, SubAssign},
-    time::Duration,
-};
+use std::{num::NonZero, time::Duration};
 
 #[derive(Component)]
-#[component(on_remove = Self::on_remove)]
+#[cfg_attr(feature = "client", component(on_remove = Self::on_remove))]
 pub struct Poison {
     source: Entity,
     pub tick: Timer,
@@ -48,9 +46,10 @@ impl Poison {
 
         const BASE_POISON_DPS_DIVISOR: u16 = 20;
 
-        (*dps / BASE_POISON_DPS_DIVISOR) * self.tick.duration().as_secs() as u16
+        (**dps / BASE_POISON_DPS_DIVISOR) * self.tick.duration().as_secs() as u16
     }
 
+    #[cfg(feature = "client")]
     fn on_remove(mut world: DeferredWorld, context: HookContext) {
         world.trigger(PoisonRemoved {
             from: context.entity,
@@ -59,17 +58,17 @@ impl Poison {
 }
 
 #[derive(Component, Deref, DerefMut)]
-#[component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>)]
+#[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DefenseUp(pub StackableStatusEffect);
 #[derive(Component, Deref, DerefMut)]
-#[component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>)]
+#[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DefenseDown(pub StackableStatusEffect);
 
 #[derive(Component, Deref, DerefMut)]
-#[component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>)]
+#[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DpsUp(pub StackableStatusEffect);
 #[derive(Component, Deref, DerefMut)]
-#[component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>)]
+#[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DpsDown(pub StackableStatusEffect);
 
 #[derive(Component)]
@@ -98,6 +97,7 @@ impl StackableStatusEffect {
     }
 }
 
+#[cfg(feature = "server")]
 fn on_add<
     const DEBUFF: bool,
     T: Component + std::ops::Deref<Target = StackableStatusEffect>,
@@ -106,7 +106,8 @@ fn on_add<
     mut world: DeferredWorld,
     context: HookContext,
 ) where
-    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
+    Target::Target: DerefMut,
+    <Target::Target as Deref>::Target: Sized + From<u8> + AddAssign + SubAssign,
 {
     #[allow(
         clippy::unwrap_used,
@@ -119,12 +120,13 @@ fn on_add<
 
     if DEBUFF {
         // possible underflow
-        **target -= delta;
+        ***target -= delta;
     } else {
-        **target += delta;
+        ***target += delta;
     }
 }
 
+#[cfg(feature = "server")]
 fn on_remove<
     const DEBUFF: bool,
     T: Component + std::ops::Deref<Target = StackableStatusEffect>,
@@ -133,11 +135,12 @@ fn on_remove<
     mut world: DeferredWorld,
     context: HookContext,
 ) where
-    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
+    Target::Target: DerefMut,
+    <Target::Target as Deref>::Target: Sized + From<u8> + AddAssign + SubAssign,
 {
     #[allow(
         clippy::unwrap_used,
-        reason = "on_remove is always called after T is removed"
+        reason = "on_remove is always called right before T is removed"
     )]
     let delta = world.get::<T>(context.entity).unwrap().stacks.get().into();
     let mut target = world
@@ -145,8 +148,8 @@ fn on_remove<
         .expect("debuff target not found");
 
     if DEBUFF {
-        **target += delta;
+        ***target += delta;
     } else {
-        **target -= delta;
+        ***target -= delta;
     }
 }

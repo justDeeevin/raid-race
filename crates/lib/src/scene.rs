@@ -10,7 +10,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-pub fn main() -> impl SceneList {
+pub fn test() -> impl SceneList {
     bsn_list![
         (
             #Floor
