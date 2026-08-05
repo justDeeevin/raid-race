@@ -1,26 +1,36 @@
 use crate::{
+    Quit,
+    component::OrbitCamera,
     resource::{InputState, Inputs, Looking, Me},
     system::{
-        client, player,
-        ui::hud::{self, health_bar, mana_bar},
+        client::{self, ConnectCommand, DisconnectCommand},
+        player,
+        ui::hud::{self, HudRoot},
     },
 };
 use bevy::{
-    app::{App, Startup, Update},
-    ecs::schedule::{
-        IntoScheduleConfigs, SystemCondition,
-        common_conditions::{on_message, resource_exists},
+    app::{App, Update},
+    ecs::{
+        entity::Entity,
+        observer::On,
+        query::With,
+        schedule::{
+            IntoScheduleConfigs, SystemCondition,
+            common_conditions::{on_message, resource_exists},
+        },
+        system::{Commands, Query},
     },
     input::{keyboard::KeyboardInput, mouse::MouseButtonInput},
 };
+use bevy_console::AddConsoleCommand;
 use naia_bevy_client::{
-    ClientConfig, DefaultClientTag, Plugin as ClientPlugin,
+    Client, ClientConfig, DefaultClientTag, Plugin as ClientPlugin,
     events::{ClientTickEvent, DespawnEntityEvent, SpawnEntityEvent},
 };
 use raid_race_lib::protocol;
 
 pub fn hud(app: &mut App) {
-    app.add_systems(Update, (health_bar, mana_bar))
+    app.add_systems(Update, (hud::health_bar, hud::mana_bar))
         .add_observer(hud::remove_poison);
 }
 
@@ -29,12 +39,21 @@ pub fn client(app: &mut App) {
         ClientConfig::default(),
         protocol(),
     ))
-    .add_systems(Startup, client::connect)
     .add_systems(
         Update,
         client::tick.run_if(on_message::<ClientTickEvent<DefaultClientTag>>),
     )
-    .add_observer(client::disconnect);
+    .add_observer(
+        |_: On<Quit>,
+         client: Client<DefaultClientTag>,
+         hud: Query<Entity, With<HudRoot>>,
+         camera: Query<Entity, With<OrbitCamera>>,
+         commands: Commands| {
+            client::disconnect(client, hud, camera, commands);
+        },
+    )
+    .add_console_command::<ConnectCommand, _>(client::connect_command)
+    .add_console_command::<DisconnectCommand, _>(client::disconnect_command);
 }
 
 pub fn player(app: &mut App) {

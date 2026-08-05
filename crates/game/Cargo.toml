@@ -10,8 +10,10 @@ tracing = "0.1.44"
 naia-bevy-client = { git = "https://github.com/getong/naia", branch = "bevy-0.19", features = [
 	"transport_webrtc",
 ] }
+naia-client = { git = "https://github.com/getong/naia", branch = "bevy-0.19" }
 raid-race-lib = { workspace = true, features = ["client"] }
 hakari = { version = "0.1", path = "../hakari" }
+bevy_console = "0.18.0"
 
 [lints]
 workspace = true

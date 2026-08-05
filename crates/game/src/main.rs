@@ -15,9 +15,11 @@ use bevy::{
         schedule::{IntoScheduleConfigs, common_conditions::on_message},
         system::{Commands, Query},
     },
+    log::LogPlugin,
     scene::SpawnListSystem,
     window::{PrimaryWindow, WindowCloseRequested, WindowPlugin},
 };
+use bevy_console::{ConsolePlugin, make_layer};
 use naia_bevy_client::{AppRegisterComponentEvents, DefaultClientTag};
 use raid_race_lib::{
     component::alive::{Agility, Cdr, Defense, Dps, Health, Luck, Mana, player::SimSync},
@@ -27,10 +29,16 @@ use raid_race_lib::{
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                close_when_requested: false,
-                ..Default::default()
-            }),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    close_when_requested: false,
+                    ..Default::default()
+                })
+                .set(LogPlugin {
+                    custom_layer: make_layer,
+                    ..Default::default()
+                }),
+            ConsolePlugin,
             PhysicsPlugins::default(),
             plugin::client,
             plugin::player,

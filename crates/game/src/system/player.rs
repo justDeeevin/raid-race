@@ -23,7 +23,7 @@ use bevy::{
         mouse::{AccumulatedMouseMotion, MouseButton, MouseButtonInput},
     },
     math::{
-        Dir3, EulerRot, Quat, Vec3,
+        EulerRot, Quat, Vec3,
         primitives::{Capsule3d, Cuboid},
     },
     mesh::{Mesh, Mesh3d},
@@ -32,6 +32,7 @@ use bevy::{
     transform::components::Transform,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
+use bevy_console::ConsoleOpen;
 use naia_bevy_client::{
     Client, DefaultClientTag,
     events::{DespawnEntityEvent, SpawnEntityEvent},
@@ -51,9 +52,12 @@ pub fn spawn(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    cameras: Query<Entity, With<Camera3d>>,
     me: Option<Res<Me>>,
 ) {
-    for event in spawned.read() {
+    if let Some(event) = spawned.read().next() {
+        #[warn(clippy::unwrap_used, reason = "tmp")]
+        let camera = cameras.single().unwrap();
         let player = event.entity;
 
         const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
@@ -71,14 +75,10 @@ pub fn spawn(
             )],
         ));
 
-        commands.spawn((
-            Camera3d::default(),
-            Transform::default().looking_to(Dir3::Z, Dir3::Y),
-            OrbitCamera {
-                target: player,
-                offset: CAMERA_OFFSET,
-            },
-        ));
+        commands.entity(camera).insert(OrbitCamera {
+            target: player,
+            offset: CAMERA_OFFSET,
+        });
 
         if me.is_none() {
             commands.insert_resource(Me(player));
@@ -99,14 +99,9 @@ pub fn despawn(
         .collect::<HashMap<_, _>>();
 
     for event in despawns.read() {
-        commands
-            .entity(
-                cameras
-                    .get(&event.entity)
-                    .copied()
-                    .expect("camera not found for player"),
-            )
-            .despawn();
+        if let Some(camera) = cameras.get(&event.entity).copied() {
+            commands.entity(camera).despawn();
+        }
         if let Some(me) = &me
             && ***me == event.entity
         {
@@ -119,6 +114,7 @@ pub fn read_input(
     mut buttons: MessageReader<KeyboardInput>,
     mut inputs: ResMut<Inputs>,
     mut input_state: ResMut<InputState>,
+    console_state: Res<ConsoleOpen>,
 ) {
     for KeyboardInput {
         key_code,
@@ -142,7 +138,13 @@ pub fn read_input(
         };
 
         let input = match state {
-            ButtonState::Pressed => Input::Pressed(button),
+            ButtonState::Pressed => {
+                if console_state.open {
+                    continue;
+                } else {
+                    Input::Pressed(button)
+                }
+            }
             ButtonState::Released => Input::Released(button),
         };
 
@@ -223,6 +225,7 @@ pub fn grabber(
     mut key: MessageReader<KeyboardInput>,
     mut looking: ResMut<Looking>,
     mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
+    console_state: Res<ConsoleOpen>,
 ) {
     #[allow(clippy::unwrap_used, reason = "there's only one primary window")]
     let mut options = options.single_mut().unwrap();
@@ -237,7 +240,7 @@ pub fn grabber(
             options.grab_mode = CursorGrabMode::None;
             options.visible = true;
         }
-    } else if click {
+    } else if click && !console_state.open {
         **looking = true;
         options.grab_mode = CursorGrabMode::Locked;
         options.visible = false;

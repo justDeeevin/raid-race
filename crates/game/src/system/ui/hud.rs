@@ -4,6 +4,7 @@ use bevy::{
     ecs::{
         change_detection::DetectChanges,
         children,
+        component::Component,
         entity::Entity,
         observer::On,
         system::{Commands, Query},
@@ -65,8 +66,12 @@ pub fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Ma
     }
 }
 
+#[derive(Component)]
+pub struct HudRoot;
+
 pub fn spawn(mut commands: Commands, player: Entity) {
     commands.spawn((
+        HudRoot,
         Node {
             width: percent(100),
             height: percent(100),
