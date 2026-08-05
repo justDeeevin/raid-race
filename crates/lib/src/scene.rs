@@ -13,6 +13,9 @@ use bevy::{
 pub fn test() -> impl SceneList {
     bsn_list![
         (
+            bevy::camera::Camera3d
+        )
+        (
             #Floor
             template_value(RigidBody::Static)
             Collider::cuboid(100.0, 1.0, 100.0)

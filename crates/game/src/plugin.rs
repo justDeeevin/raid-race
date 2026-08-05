@@ -1,7 +1,7 @@
 use crate::{
     Quit,
     component::OrbitCamera,
-    resource::{InputState, Inputs, Looking, Me},
+    resource::{InputState, Looking, Me},
     system::{
         client::{self, ConnectCommand, DisconnectCommand},
         player,
@@ -64,14 +64,12 @@ pub fn player(app: &mut App) {
             player::despawn.run_if(on_message::<DespawnEntityEvent<DefaultClientTag>>),
             player::sync_sim,
             player::camera,
-            player::read_input.run_if(on_message::<KeyboardInput>),
-            player::simulate_input.run_if(resource_exists::<Me>),
             player::grabber
                 .run_if(on_message::<KeyboardInput>.or_eager(on_message::<MouseButtonInput>)),
+            player::read_input.run_if(resource_exists::<Me>),
         ),
     )
     .add_observer(player::send_input)
-    .init_resource::<InputState>()
-    .init_resource::<Inputs>()
-    .init_resource::<Looking>();
+    .init_resource::<Looking>()
+    .init_resource::<InputState>();
 }

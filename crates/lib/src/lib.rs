@@ -6,11 +6,13 @@ pub mod system;
 
 use crate::component::alive::{Agility, Cdr, Defense, Dps, Health, Luck, Mana, player::SimSync};
 use message::Auth;
-use naia_bevy_shared::{ChannelDirection, ChannelMode, Protocol, TickBufferSettings};
+use naia_bevy_shared::{
+    ChannelDirection, ChannelMode, Protocol, ReliableSettings, TickBufferSettings,
+};
 use std::time::Duration;
 
-const TICK_PERIOD: Duration = Duration::from_micros(15625); // 64 Hz
-// const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
+// const TICK_PERIOD: Duration = Duration::from_micros(15625); // 64 Hz
+const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
 
 pub fn protocol() -> Protocol {
     Protocol::builder()
@@ -28,6 +30,11 @@ pub fn protocol() -> Protocol {
             ChannelMode::TickBuffered(TickBufferSettings::default()),
         )
         .add_message::<message::Input>()
+        .add_channel::<channel::You>(
+            ChannelDirection::ServerToClient,
+            ChannelMode::UnorderedReliable(ReliableSettings::default()),
+        )
+        .add_message::<message::You>()
         .add_message::<Auth>()
         .build()
 }

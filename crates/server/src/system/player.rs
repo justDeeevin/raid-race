@@ -36,9 +36,7 @@ pub fn receive_input(
     )]
     let entity = *user_entities.get(&event.user).unwrap();
 
-    tracing::debug!(?event.user, ?event.message, "input");
-
-    inputs.entry(entity).or_default().apply(event.message);
+    inputs.insert(entity, event.message.buttons);
 }
 
 pub fn apply_input(

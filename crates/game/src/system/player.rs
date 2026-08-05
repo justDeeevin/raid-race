@@ -1,7 +1,7 @@
 use super::client::Tick;
 use crate::{
     component::OrbitCamera,
-    resource::{InputState, Inputs, Looking, Me},
+    resource::{InputState, Looking, Me},
 };
 use avian3d::{dynamics::rigid_body::LinearVelocity, parry::utils::hashmap::HashMap};
 use bevy::{
@@ -18,7 +18,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     input::{
-        ButtonState,
+        ButtonInput,
         keyboard::{KeyCode, KeyboardInput},
         mouse::{AccumulatedMouseMotion, MouseButton, MouseButtonInput},
     },
@@ -40,7 +40,7 @@ use naia_bevy_client::{
 use raid_race_lib::{
     channel,
     component::alive::{Agility, player::SimSync},
-    message::{Button, Input},
+    message::Buttons,
     system::{
         entity::{self, PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS},
         player::{YAW_SENS, walk},
@@ -111,70 +111,49 @@ pub fn despawn(
 }
 
 pub fn read_input(
-    mut buttons: MessageReader<KeyboardInput>,
-    mut inputs: ResMut<Inputs>,
+    keyboard: Res<ButtonInput<KeyCode>>,
     mut input_state: ResMut<InputState>,
     console_state: Res<ConsoleOpen>,
-) {
-    for KeyboardInput {
-        key_code,
-        state,
-        repeat,
-        ..
-    } in buttons.read()
-    {
-        if *repeat {
-            continue;
-        }
-
-        // TODO: this should eventually be configurable
-        let button = match key_code {
-            KeyCode::KeyW => Button::Forward,
-            KeyCode::KeyD => Button::Right,
-            KeyCode::KeyS => Button::Backward,
-            KeyCode::KeyA => Button::Left,
-            KeyCode::Space => Button::Jump,
-            _ => continue,
-        };
-
-        let input = match state {
-            ButtonState::Pressed => {
-                if console_state.open {
-                    continue;
-                } else {
-                    Input::Pressed(button)
-                }
-            }
-            ButtonState::Released => Input::Released(button),
-        };
-
-        input_state.apply(input);
-        inputs.push(input);
-    }
-}
-
-pub fn simulate_input(
-    input: Res<InputState>,
     mut params: Query<(&mut LinearVelocity, &Transform, &Agility)>,
     time: Res<Time>,
     me: Res<Me>,
 ) {
+    const FORWARD: KeyCode = KeyCode::KeyW;
+    const RIGHT: KeyCode = KeyCode::KeyD;
+    const BACKWARD: KeyCode = KeyCode::KeyS;
+    const LEFT: KeyCode = KeyCode::KeyA;
+    const JUMP: KeyCode = KeyCode::Space;
+
+    macro_rules! set {
+        ($($key:ident),* $(,)?) => {
+            $({
+                let prev = input_state.buttons.contains(Buttons::$key);
+                input_state.buttons.set(Buttons::$key, keyboard.pressed($key) && (!console_state.open || prev));
+            })*
+        }
+    }
+
+    set!(FORWARD, RIGHT, BACKWARD, LEFT, JUMP);
+
     let (mut velocity, transform, agility) = params
         .get_mut(**me)
         .expect("player is missing necessary components for movement");
 
-    walk(**input, &mut velocity, transform, agility, &time);
+    walk(
+        input_state.buttons,
+        &mut velocity,
+        transform,
+        agility,
+        &time,
+    );
 }
 
 pub fn send_input(
     tick: On<Tick>,
     mut client: Client<DefaultClientTag>,
-    mut inputs: ResMut<Inputs>,
+    input_state: Res<InputState>,
 ) {
-    for input in inputs.drain(..) {
-        tracing::info!(?input, "sending input");
-        client.send_tick_buffer_message::<channel::Input, _>(&tick.0, &input);
-    }
+    client.send_tick_buffer_message::<channel::Input, _>(&tick.0, &**input_state);
 }
 
 pub fn sync_sim(query: Query<(&SimSync, &mut Transform, &mut LinearVelocity), Changed<SimSync>>) {
