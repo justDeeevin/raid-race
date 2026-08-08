@@ -25,9 +25,18 @@ avian3d = { version = "0.7.0", default-features = false, features = [
 	"parry-f64",
 	"xpbd_joints",
 ] }
+lightyear = { version = "0.29.0", default-features = false, features = [
+	"replication",
+	"avian3d",
+	"webtransport",
+	"netcode",
+	"input_bei",
+] }
+async-net = "2.0.0"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
+type_complexity = "allow"
 
 [profile.dev]
 opt-level = 1

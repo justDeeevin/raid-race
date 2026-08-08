@@ -1,40 +1,62 @@
-pub mod channel;
 pub mod component;
-pub mod message;
+pub mod input;
+pub mod player;
 pub mod scene;
-pub mod system;
 
-use crate::component::alive::{Agility, Cdr, Defense, Dps, Health, Luck, Mana, player::SimSync};
-use message::Auth;
-use naia_bevy_shared::{
-    ChannelDirection, ChannelMode, Protocol, ReliableSettings, TickBufferSettings,
+use avian3d::{
+    dynamics::solver::islands::{IslandPlugin, IslandSleepingPlugin},
+    interpolation::PhysicsInterpolationPlugin,
+    physics_transform::PhysicsTransformPlugin,
+    PhysicsPlugins,
 };
-use std::time::Duration;
+use bevy::{
+    app::{App, PluginGroup, Startup},
+    scene::SpawnListSystem,
+};
+use component::alive::{
+    player::{CanJump, Pitch, Player},
+    Agility, Cdr, Defense, Dps, Health, Luck, Mana,
+};
+use input::{Jump, Look, Walk};
+use lightyear::{
+    avian3d::plugin::LightyearAvianPlugin,
+    input::bei::prelude::InputPlugin,
+    prelude::{input::InputRegistryExt, AppComponentExt},
+};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    time::Duration,
+};
 
-// const TICK_PERIOD: Duration = Duration::from_micros(15625); // 64 Hz
-const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
+pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
+pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
+pub const GAME_PORT: u16 = 5000;
+pub const AUTH_PORT: u16 = 4000;
 
-pub fn protocol() -> Protocol {
-    Protocol::builder()
-        .tick_interval(TICK_PERIOD)
-        .add_component::<SimSync>()
-        .add_component::<Health>()
-        .add_component::<Mana>()
-        .add_component::<Dps>()
-        .add_component::<Agility>()
-        .add_component::<Cdr>()
-        .add_component::<Defense>()
-        .add_component::<Luck>()
-        .add_channel::<channel::Input>(
-            ChannelDirection::ClientToServer,
-            ChannelMode::TickBuffered(TickBufferSettings::default()),
-        )
-        .add_message::<message::Input>()
-        .add_channel::<channel::You>(
-            ChannelDirection::ServerToClient,
-            ChannelMode::UnorderedReliable(ReliableSettings::default()),
-        )
-        .add_message::<message::You>()
-        .add_message::<Auth>()
-        .build()
+pub fn plugin(app: &mut App) {
+    macro_rules! replicate {
+        ($($cmp:ty),* $(,)?) => {
+            $(app.component::<$cmp>().replicate();)*
+        }
+    }
+
+    replicate!(Player, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch);
+
+    app.add_plugins(InputPlugin::<Player>::default())
+        .add_plugins(InputPlugin::<CanJump>::default())
+        .register_input_action::<Walk>()
+        .register_input_action::<Jump>()
+        .register_input_action::<Look>();
+
+    app.add_plugins((
+        LightyearAvianPlugin::default(),
+        PhysicsPlugins::default()
+            .build()
+            .disable::<PhysicsTransformPlugin>()
+            .disable::<PhysicsInterpolationPlugin>()
+            .disable::<IslandPlugin>()
+            .disable::<IslandSleepingPlugin>(),
+    ));
+
+    app.add_systems(Startup, scene::test.spawn());
 }

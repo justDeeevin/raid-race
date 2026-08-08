@@ -1,11 +1,9 @@
 #[cfg(feature = "server")]
 use super::Defense;
 #[cfg(feature = "server")]
-use bevy::ecs::component::Mutable;
-#[cfg(any(feature = "client", feature = "server"))]
-use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+use bevy::ecs::{component::Mutable, lifecycle::HookContext, world::DeferredWorld};
 #[cfg(feature = "server")]
-use std::ops::{AddAssign, Deref, DerefMut, SubAssign};
+use std::ops::{AddAssign, DerefMut, SubAssign};
 
 use super::{Cdr, Dps};
 use bevy::{
@@ -16,7 +14,6 @@ use bevy::{
 use std::{num::NonZero, time::Duration};
 
 #[derive(Component)]
-#[cfg_attr(feature = "client", component(on_remove = Self::on_remove))]
 pub struct Poison {
     source: Entity,
     pub tick: Timer,
@@ -46,14 +43,7 @@ impl Poison {
 
         const BASE_POISON_DPS_DIVISOR: u16 = 20;
 
-        (**dps / BASE_POISON_DPS_DIVISOR) * self.tick.duration().as_secs() as u16
-    }
-
-    #[cfg(feature = "client")]
-    fn on_remove(mut world: DeferredWorld, context: HookContext) {
-        world.trigger(PoisonRemoved {
-            from: context.entity,
-        });
+        (*dps / BASE_POISON_DPS_DIVISOR) * self.tick.duration().as_secs() as u16
     }
 }
 
@@ -106,8 +96,7 @@ fn on_add<
     mut world: DeferredWorld,
     context: HookContext,
 ) where
-    Target::Target: DerefMut,
-    <Target::Target as Deref>::Target: Sized + From<u8> + AddAssign + SubAssign,
+    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
 {
     #[allow(
         clippy::unwrap_used,
@@ -119,10 +108,10 @@ fn on_add<
         .expect("debuff target not found");
 
     if DEBUFF {
-        // possible underflow
-        ***target -= delta;
+        // FIXME: possible underflow
+        **target -= delta;
     } else {
-        ***target += delta;
+        **target += delta;
     }
 }
 
@@ -135,8 +124,7 @@ fn on_remove<
     mut world: DeferredWorld,
     context: HookContext,
 ) where
-    Target::Target: DerefMut,
-    <Target::Target as Deref>::Target: Sized + From<u8> + AddAssign + SubAssign,
+    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
 {
     #[allow(
         clippy::unwrap_used,
@@ -148,8 +136,9 @@ fn on_remove<
         .expect("debuff target not found");
 
     if DEBUFF {
-        ***target += delta;
+        **target += delta;
     } else {
-        ***target -= delta;
+        // FIXME: possible underflow
+        **target -= delta;
     }
 }

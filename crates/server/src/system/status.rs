@@ -4,7 +4,7 @@ use bevy::{
         entity::Entity,
         system::{Commands, Query, Res},
     },
-    time::Time,
+    time::{Fixed, Time},
 };
 use raid_race_lib::component::alive::{
     Dps, Health,
@@ -13,7 +13,7 @@ use raid_race_lib::component::alive::{
 
 pub fn poison(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     afflicted: Query<(Entity, &mut Health, &mut Poison)>,
     damagers: Query<&Dps>,
 ) {
@@ -32,7 +32,7 @@ pub fn stat_change<
     T: Component<Mutability = Mutable> + std::ops::DerefMut<Target = StackableStatusEffect>,
 >(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     effects: Query<(Entity, &mut T)>,
 ) {
     for (entity, mut effect) in effects {

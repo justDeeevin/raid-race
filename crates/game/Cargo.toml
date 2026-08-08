@@ -7,13 +7,18 @@ edition.workspace = true
 bevy = { workspace = true, features = ["3d", "audio", "dynamic_linking", "ui"] }
 avian3d = { workspace = true, features = ["debug-plugin"] }
 tracing = "0.1.44"
-naia-bevy-client = { git = "https://github.com/getong/naia", branch = "bevy-0.19", features = [
-	"transport_webrtc",
-] }
-naia-client = { git = "https://github.com/getong/naia", branch = "bevy-0.19" }
-raid-race-lib = { workspace = true, features = ["client"] }
+raid-race-lib.workspace = true
 hakari = { version = "0.1", path = "../hakari" }
 bevy_console = "0.18.0"
+lightyear = { workspace = true, features = [
+	"client",
+	"prediction",
+	"interpolation",
+] }
+async-net.workspace = true
+# TODO: use crates.io when this gets merged and released
+bevy-inspector-egui = { git = "https://github.com/taboky-dev/bevy-inspector-egui", branch = "update_bevy_egui" }
+bevy_egui = "0.41.1"
 
 [lints]
 workspace = true

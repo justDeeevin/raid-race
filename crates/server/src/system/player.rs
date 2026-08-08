@@ -1,105 +1,79 @@
-use crate::{
-    component::Movement,
-    resource::{Inputs, UserEntities},
-    system::server::{Message, Tick},
-};
 use avian3d::{
     collision::{collider::Sensor, contact_types::Collisions},
-    dynamics::rigid_body::LinearVelocity,
     math::Vector,
 };
-use bevy::{
-    ecs::{
-        entity::Entity,
-        hierarchy::ChildOf,
-        observer::On,
-        query::{Changed, Or, With},
-        system::{Query, Res, ResMut},
-    },
-    time::Time,
-    transform::components::Transform,
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    hierarchy::ChildOf,
+    lifecycle::Add,
+    observer::On,
+    query::With,
+    system::{Commands, Query},
 };
+use lightyear::prelude::input::bei::{Action, ActionOf, Complete, Start, TriggerState};
 use raid_race_lib::{
-    component::alive::{Agility, player::SimSync},
-    message::{Buttons, Input},
-    system::player::{JUMP_SPEED, walk},
+    component::alive::player::{CanJump, Player},
+    input::Jump,
 };
 
-pub fn receive_input(
-    event: On<Message<Input>>,
-    user_entities: Res<UserEntities>,
-    mut inputs: ResMut<Inputs>,
-) {
-    #[allow(
-        clippy::unwrap_used,
-        reason = "user_entities stays up-to-date with connected users; if a user sends a message, it's guarenteed to be in the table"
-    )]
-    let entity = *user_entities.get(&event.user).unwrap();
-
-    inputs.insert(entity, event.message.buttons);
-}
-
-pub fn apply_input(
-    mut params: Query<(&mut LinearVelocity, &mut Transform, &Agility, &mut Movement)>,
-    time: Res<Time>,
-    inputs: Res<Inputs>,
-) {
-    for (entity, input) in &inputs.0 {
-        let (mut velocity, transform, agility, mut state) = params
-            .get_mut(*entity)
-            .expect("user entity is missing necessary components for movement");
-        walk(*input, &mut velocity, &transform, agility, &time);
-
-        if state.ground_contacts != 0 {
-            let jump = input.contains(Buttons::JUMP);
-            if state.bhop {
-                if !jump {
-                    state.bhop = false;
-                }
-            } else if jump {
-                velocity.y = JUMP_SPEED;
-                state.bhop = true;
-            }
-        }
-    }
-}
+#[derive(Component)]
+pub struct Grounded;
 
 pub fn grounded(
+    mut commands: Commands,
     collisions: Collisions,
-    mut state: Query<&mut Movement>,
     sensors: Query<(Entity, &ChildOf), With<Sensor>>,
+    grounded: Query<Entity, With<Grounded>>,
 ) {
     const MIN_GROUND_ANGLE: f64 = 30_f64.to_radians();
 
     for (sensor, ChildOf(parent)) in sensors {
-        let Ok(mut state) = state.get_mut(*parent) else {
-            continue;
-        };
-        state.ground_contacts = 0;
         if collisions.collisions_with(sensor).any(|c| {
             c.manifolds
                 .iter()
                 .any(|m| m.normal.dot(Vector::Y).abs() >= MIN_GROUND_ANGLE.sin())
         }) {
-            state.ground_contacts += 1;
+            if grounded.get(*parent).is_err() {
+                commands.entity(*parent).insert(Grounded);
+            }
+        } else if grounded.get(*parent).is_ok() {
+            commands.entity(*parent).remove::<Grounded>();
         }
     }
 }
 
-#[allow(clippy::type_complexity, reason = "fuq off")]
-pub fn sync_sim(
-    _: On<Tick>,
-    simulated: Query<
-        (Entity, &Transform, &LinearVelocity),
-        Or<(Changed<Transform>, Changed<LinearVelocity>)>,
-    >,
-    mut replicated: Query<&mut SimSync>,
+pub fn landed(
+    event: On<Add, Grounded>,
+    mut commands: Commands,
+    jumps: Query<&TriggerState, With<Action<Jump>>>,
 ) {
-    for (entity, transform, velocity) in simulated {
-        let Ok(mut sim) = replicated.get_mut(entity) else {
-            continue;
-        };
-        *sim.translation = transform.translation.into();
-        *sim.velocity = velocity.0.into();
+    if let Ok(jump) = jumps.get(event.entity)
+        && *jump == TriggerState::None
+    {
+        commands.entity(event.entity).insert(CanJump);
+    }
+}
+
+pub fn jump_released(
+    event: On<Complete<Jump>>,
+    mut commands: Commands,
+    actions: Query<&ActionOf<Player>, With<Action<Jump>>>,
+    grounded: Query<&Grounded>,
+) {
+    if let Ok(player) = actions.get(event.context)
+        && grounded.get(**player).is_ok()
+    {
+        commands.entity(**player).insert(CanJump);
+    }
+}
+
+pub fn leave_ground(
+    event: On<Start<Jump>>,
+    mut commands: Commands,
+    actions: Query<&ActionOf<Player>, With<Action<Jump>>>,
+) {
+    if let Ok(player) = actions.get(event.context) {
+        commands.entity(**player).remove::<CanJump>();
     }
 }

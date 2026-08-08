@@ -1,22 +1,30 @@
-use bevy::ecs::{
-    entity::Entity,
-    event::Event,
-    message::MessageReader,
-    query::With,
-    system::{Commands, Query},
+use async_net::TcpStream;
+use bevy::{
+    asset::AsyncReadExt,
+    ecs::{
+        entity::Entity,
+        query::With,
+        resource::Resource,
+        system::{Commands, Query, ResMut},
+    },
+    prelude::{Deref, DerefMut},
+    tasks::{IoTaskPool, Task, block_on, poll_once},
 };
 use bevy_console::{
     ConsoleCommand,
     clap::{self, Parser},
 };
-use naia_bevy_client::{Client, DefaultClientTag, events::ClientTickEvent, transport::webrtc};
-use naia_client::ConnectionStatus;
-use raid_race_lib::message::Auth;
-
-use crate::{component::OrbitCamera, resource::Me, system::ui::hud::HudRoot};
-
-#[derive(Event)]
-pub struct Tick(pub naia_bevy_client::Tick);
+use lightyear::{
+    connection::client::{Client, Connect},
+    netcode::{
+        CONNECT_TOKEN_BYTES, ConnectToken, NetcodeClient, auth::Authentication,
+        client_plugin::NetcodeConfig,
+    },
+    prelude::{LocalAddr, PeerAddr, PingManager, ReplicationReceiver},
+    webtransport::client::WebTransportClientIo,
+};
+use raid_race_lib::{AUTH_PORT, GAME_PORT};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "connect")]
@@ -35,79 +43,78 @@ pub struct ConnectCommand {
 /// Disconnect from the current server
 pub struct DisconnectCommand;
 
-pub fn connect(mut client: Client<DefaultClientTag>, address: impl AsRef<str>) {
-    client.auth(Auth);
-    client.connect(webrtc::Socket::new(
-        &make_url(address),
-        client.socket_config(),
+#[derive(Resource, Deref, DerefMut)]
+pub struct TokenTask(Task<ConnectToken>);
+
+pub fn connect(mut commands: Commands, server: IpAddr) {
+    let server_socket = SocketAddr::new(server, GAME_PORT);
+    const CLIENT_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
+
+    commands.spawn((
+        Client,
+        ReplicationReceiver,
+        LocalAddr(SocketAddr::new(CLIENT_ADDR, 0)),
+        PeerAddr(server_socket),
+        PingManager::default(),
+        WebTransportClientIo {
+            certificate_digest: include_str!("../../../server/digest.txt").into(),
+            target: None,
+            // target: Some(format!("https://{server_socket}")),
+        },
     ));
+
+    let task = IoTaskPool::get().spawn(get_token(server));
+    commands.insert_resource(TokenTask(task))
 }
 
-fn make_url(address: impl AsRef<str>) -> String {
-    let mut url = address.as_ref().to_string();
+// TODO: steam
+async fn get_token(server: IpAddr) -> ConnectToken {
+    tracing::info!("fetching auth token");
+    let mut stream = TcpStream::connect(SocketAddr::new(server, AUTH_PORT))
+        .await
+        .expect("failed to connect to auth server");
 
-    if !url.starts_with("http://") && !url.starts_with("https://") {
-        url = format!("http://{url}");
-    }
+    let mut buffer = [0_u8; CONNECT_TOKEN_BYTES];
 
-    if url
-        .split(':')
-        .next_back()
-        .is_none_or(|s| s.parse::<u16>().is_err())
-    {
-        url += ":14191";
-    }
+    stream
+        .read_exact(&mut buffer)
+        .await
+        .expect("failed to read connect token");
 
-    url
+    ConnectToken::try_from_bytes(&buffer).expect("failed to parse connect token from server")
 }
 
-pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, client: Client<DefaultClientTag>) {
-    if let Some(Ok(cmd)) = cmd.take() {
-        connect(client, cmd.address);
-    }
-}
-
-pub fn tick(mut ticks: MessageReader<ClientTickEvent<DefaultClientTag>>, mut commands: Commands) {
-    for event in ticks.read() {
-        commands.trigger(Tick(event.tick))
-    }
-}
-
-pub fn disconnect(
-    mut client: Client<DefaultClientTag>,
-    hud: Query<Entity, With<HudRoot>>,
-    camera: Query<Entity, With<OrbitCamera>>,
+pub fn wait_for_token(
+    mut task: ResMut<TokenTask>,
+    client: Query<Entity, With<Client>>,
     mut commands: Commands,
-) -> bool {
-    if client.connection_status() != ConnectionStatus::Connected {
-        return false;
-    };
+) {
+    if let Some(token) = block_on(poll_once(&mut **task)) {
+        let entity = client.single().expect("no client");
+        commands.remove_resource::<TokenTask>();
 
-    if let Ok(entity) = hud.single() {
-        commands.entity(entity).despawn();
+        #[allow(clippy::unwrap_used, reason = "should never fail")]
+        {
+            commands.entity(entity).insert(
+                NetcodeClient::new(Authentication::Token(token), NetcodeConfig::default()).unwrap(),
+            );
+        }
+
+        commands.trigger(Connect { entity });
     }
-    for entity in camera {
-        commands.entity(entity).despawn();
-    }
-    commands.remove_resource::<Me>();
-
-    client.disconnect();
-
-    true
 }
 
-pub fn disconnect_command(
-    mut cmd: ConsoleCommand<DisconnectCommand>,
-    client: Client<DefaultClientTag>,
-    hud: Query<Entity, With<HudRoot>>,
-    camera: Query<Entity, With<OrbitCamera>>,
-    commands: Commands,
-) {
-    let Some(Ok(_)) = cmd.take() else {
-        return;
-    };
+pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, commands: Commands) {
+    if let Some(Ok(ConnectCommand { address })) = cmd.take() {
+        let addr = if address == "localhost" {
+            IpAddr::V4(Ipv4Addr::LOCALHOST)
+        } else if let Ok(addr) = address.parse() {
+            addr
+        } else {
+            cmd.reply_failed("invalid address");
+            return;
+        };
 
-    if !disconnect(client, hud, camera, commands) {
-        cmd.reply_failed("not currently connected");
+        connect(commands, addr);
     }
 }

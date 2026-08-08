@@ -1,4 +1,6 @@
-use avian3d::{collision::collider::Collider, dynamics::rigid_body::RigidBody};
+use avian3d::{
+    collision::collider::Collider, dynamics::rigid_body::RigidBody, physics_transform::Position,
+};
 use bevy::{
     asset::asset_value,
     color::Color,
@@ -13,9 +15,6 @@ use bevy::{
 pub fn test() -> impl SceneList {
     bsn_list![
         (
-            bevy::camera::Camera3d
-        )
-        (
             #Floor
             template_value(RigidBody::Static)
             Collider::cuboid(100.0, 1.0, 100.0)
@@ -25,7 +24,23 @@ pub fn test() -> impl SceneList {
         (
             #FrontWall
             template_value(RigidBody::Static)
-            Transform::from_xyz(0.0, 0.5, 50.0)
+            Position::from_xyz(0.0, 0.5, -50.0)
+            Collider::cuboid(100.0, 4.0, 1.0)
+            Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #RightWall
+            template_value(RigidBody::Static)
+            Position::from_xyz(50.0, 0.5, 0.0)
+            Collider::cuboid(1.0, 4.0, 100.0)
+            Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        ),
+        (
+            #BackWall
+            template_value(RigidBody::Static)
+            Position::from_xyz(0.0, 0.5, 50.0)
             Collider::cuboid(100.0, 4.0, 1.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
@@ -33,32 +48,16 @@ pub fn test() -> impl SceneList {
         (
             #LeftWall
             template_value(RigidBody::Static)
-            Transform::from_xyz(50.0, 0.5, 0.0)
             Collider::cuboid(1.0, 4.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-        ),
-        (
-            #RightWall
-            template_value(RigidBody::Static)
-            Transform::from_xyz(0.0, 0.5, -50.0)
-            Collider::cuboid(100.0, 4.0, 1.0)
-            Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-        ),
-        (
-            #BackWall
-            template_value(RigidBody::Static)
-            Transform::from_xyz(-50.0, 0.5, 0.0)
-            Collider::cuboid(1.0, 4.0, 100.0)
-            Mesh3d(asset_value(Cuboid::new(0.0, 4.0, 100.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            Position::from_xyz(-50.0, 0.5, 0.0)
         ),
         (
             PointLight {
                 shadow_maps_enabled: true,
             }
-            Transform::from_xyz(4.0, 8.0, 4.0)
+            Transform::from_xyz(0.0, 8.0, 0.0)
         ),
     ]
 }

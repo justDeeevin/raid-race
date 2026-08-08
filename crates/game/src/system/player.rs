@@ -1,227 +1,156 @@
-use super::client::Tick;
-use crate::{
-    component::OrbitCamera,
-    resource::{InputState, Looking, Me},
-};
-use avian3d::{dynamics::rigid_body::LinearVelocity, parry::utils::hashmap::HashMap};
+use crate::component::OrbitCamera;
+use avian3d::physics_transform::{Position, Rotation};
 use bevy::{
-    asset::Assets,
+    asset::asset_value,
     camera::Camera3d,
     color::Color,
     ecs::{
-        change_detection::DetectChanges,
-        children,
+        bundle::Bundle,
+        component::Component,
         entity::Entity,
-        message::MessageReader,
+        hierarchy::Children,
+        lifecycle::{Add, Insert},
         observer::On,
-        query::{Changed, With},
-        system::{Commands, Query, Res, ResMut},
+        query::{With, Without},
+        spawn::SpawnRelated,
+        system::{Commands, Query},
     },
-    input::{
-        ButtonInput,
-        keyboard::{KeyCode, KeyboardInput},
-        mouse::{AccumulatedMouseMotion, MouseButton, MouseButtonInput},
-    },
+    input::keyboard::KeyCode,
     math::{
         EulerRot, Quat, Vec3,
         primitives::{Capsule3d, Cuboid},
     },
-    mesh::{Mesh, Mesh3d},
+    mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
-    time::Time,
+    scene::{EntityCommandsSceneExt, bsn},
     transform::components::Transform,
-    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use bevy_console::ConsoleOpen;
-use naia_bevy_client::{
-    Client, DefaultClientTag,
-    events::{DespawnEntityEvent, SpawnEntityEvent},
+use lightyear::prelude::{
+    Controlled,
+    input::bei::{Action, ActionOf, Binding, Bindings, Cardinal, InputAction, bindings},
 };
 use raid_race_lib::{
-    channel,
-    component::alive::{Agility, player::SimSync},
-    message::Buttons,
-    system::{
-        entity::{self, PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS},
-        player::{YAW_SENS, walk},
-    },
+    component::alive::player::{Pitch, Player},
+    input::{Jump, Look, Walk},
+    player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
 };
 
-pub fn spawn(
-    mut spawned: MessageReader<SpawnEntityEvent<DefaultClientTag>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    cameras: Query<Entity, With<Camera3d>>,
-    me: Option<Res<Me>>,
-) {
-    if let Some(event) = spawned.read().next() {
-        #[warn(clippy::unwrap_used, reason = "tmp")]
-        let camera = cameras.single().unwrap();
-        let player = event.entity;
+// TODO: configurable
+pub trait Binds: InputAction {
+    fn bindings() -> impl Bundle;
+}
 
-        const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
-        commands.entity(event.entity).insert((
-            entity::player(100, 40, 100).build().bundle(),
-            Mesh3d(meshes.add(Capsule3d::new(
+impl Binds for Walk {
+    fn bindings() -> impl Bundle {
+        Bindings::spawn(Cardinal::wasd_keys())
+    }
+}
+
+impl Binds for Jump {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Space]
+    }
+}
+
+impl Binds for Look {
+    fn bindings() -> impl Bundle {
+        bindings![Binding::mouse_motion()]
+    }
+}
+
+pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
+    event: On<Insert, (Action<A>, ActionOf<Context>)>,
+    actions: Query<&ActionOf<Context>, (With<Action<A>>, Without<Bindings>)>,
+    controlled: Query<(), (With<Owner>, With<Controlled>)>,
+    mut commands: Commands,
+) {
+    if let Ok(action_of) = actions.get(event.entity)
+        && controlled.get(**action_of).is_ok()
+    {
+        commands.entity(event.entity).insert(A::bindings());
+    }
+}
+
+macro_rules! add_bindings_on_owner_spawn {
+    ($owner:ty {$($owners:ident: $context:ty[$($actions:ident: $action:ty),* $(,)?]),* $(,)?}) => {{
+        use ::lightyear::{input::bei::{self, prelude::Actions}, prelude::Controlled};
+        use ::bevy::ecs::{self, system::{self, Query}, query::{self, With}};
+
+        |
+            event: ecs::observer::On<ecs::lifecycle::Add, ($owner, Controlled, $(Actions<$context>),*)>,
+            $($owners: Query<&Actions<$context>, (With<$owner>, With<Controlled>)>,
+                $($actions: Query<(), (With<bei::prelude::Action<$action>>, query::Without<bei::prelude::Bindings>)>),*
+            ),*,
+            mut commands: system::Commands,
+        | {$(
+            if let Ok(actions) = $owners.get(event.entity)  {
+                for action in actions {$(
+                    if $actions.get(action).is_ok() {
+                      commands.entity(action).insert(<$action as $crate::system::player::Binds>::bindings());
+                      continue;
+                    }
+                )*}
+            }
+        )*}
+    }}
+}
+
+pub(crate) use add_bindings_on_owner_spawn;
+
+pub fn spawn(
+    event: On<Add, (Player, Controlled)>,
+    players: Query<(), (With<Player>, With<Controlled>)>,
+    mut commands: Commands,
+    camera: Query<Entity, With<Camera3d>>,
+) {
+    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
+
+    if players.get(event.entity).is_err() {
+        return;
+    }
+
+    commands
+        .entity(event.entity)
+        .apply_scene(bsn!(
+            #Player
+            Mesh3d(asset_value(Capsule3d::new(
                 PLAYER_RADIUS as f32,
                 PLAYER_CAPSULE_LENGTH as f32,
-            ))),
-            MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-            children![(
-                Mesh3d(meshes.add(Cuboid::new(0.1, 0.1, 0.5))),
-                MeshMaterial3d(materials.add(Color::WHITE)),
-                Transform::from_xyz(0.0, 0.6, 0.5),
-            )],
-        ));
+            )))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
+            Children [
+                Mesh3d(asset_value(Cuboid::new(0.1, 0.1, 0.5)))
+                MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+                Transform::from_xyz(0.0, 0.6, -0.5)
+            ]
+        ))
+        .insert(physics_components());
 
-        commands.entity(camera).insert(OrbitCamera {
-            target: player,
+    commands
+        .entity(camera.single().expect("multiple cameras"))
+        .insert(OrbitCamera {
+            target: event.entity,
             offset: CAMERA_OFFSET,
         });
-
-        if me.is_none() {
-            commands.insert_resource(Me(player));
-            super::ui::hud::spawn(commands.reborrow(), player);
-        }
-    }
 }
 
-pub fn despawn(
-    mut commands: Commands,
-    mut despawns: MessageReader<DespawnEntityEvent<DefaultClientTag>>,
-    cameras: Query<(Entity, &OrbitCamera)>,
-    me: Option<Res<Me>>,
+pub fn orbit(
+    targets: Query<(&Position, &Rotation, &Pitch)>,
+    cameras: Query<(&mut Transform, &OrbitCamera)>,
 ) {
-    let cameras = cameras
-        .iter()
-        .map(|(e, camera)| (camera.target, e))
-        .collect::<HashMap<_, _>>();
+    for (mut transform, OrbitCamera { target, offset }) in cameras {
+        let (position, rotation, pitch) =
+            targets.get(*target).expect("orbit camera target not found");
 
-    for event in despawns.read() {
-        if let Some(camera) = cameras.get(&event.entity).copied() {
-            commands.entity(camera).despawn();
-        }
-        if let Some(me) = &me
-            && ***me == event.entity
-        {
-            commands.remove_resource::<Me>();
-        }
-    }
-}
+        transform.rotation = Quat::from_euler(
+            EulerRot::XYZ,
+            **pitch,
+            rotation.to_euler(EulerRot::XYZ).1 as f32,
+            transform.rotation.to_euler(EulerRot::XYZ).2,
+        );
 
-pub fn read_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut input_state: ResMut<InputState>,
-    console_state: Res<ConsoleOpen>,
-    mut params: Query<(&mut LinearVelocity, &Transform, &Agility)>,
-    time: Res<Time>,
-    me: Res<Me>,
-) {
-    const FORWARD: KeyCode = KeyCode::KeyW;
-    const RIGHT: KeyCode = KeyCode::KeyD;
-    const BACKWARD: KeyCode = KeyCode::KeyS;
-    const LEFT: KeyCode = KeyCode::KeyA;
-    const JUMP: KeyCode = KeyCode::Space;
-
-    macro_rules! set {
-        ($($key:ident),* $(,)?) => {
-            $({
-                let prev = input_state.buttons.contains(Buttons::$key);
-                input_state.buttons.set(Buttons::$key, keyboard.pressed($key) && (!console_state.open || prev));
-            })*
-        }
-    }
-
-    set!(FORWARD, RIGHT, BACKWARD, LEFT, JUMP);
-
-    let (mut velocity, transform, agility) = params
-        .get_mut(**me)
-        .expect("player is missing necessary components for movement");
-
-    walk(
-        input_state.buttons,
-        &mut velocity,
-        transform,
-        agility,
-        &time,
-    );
-}
-
-pub fn send_input(
-    tick: On<Tick>,
-    mut client: Client<DefaultClientTag>,
-    input_state: Res<InputState>,
-) {
-    client.send_tick_buffer_message::<channel::Input, _>(&tick.0, &**input_state);
-}
-
-pub fn sync_sim(query: Query<(&SimSync, &mut Transform, &mut LinearVelocity), Changed<SimSync>>) {
-    for (sim, mut transform, mut velocity) in query {
-        transform.translation = (*sim.translation).into();
-        **velocity = (*sim.velocity).into();
-    }
-}
-
-pub fn camera(
-    mut transform: Query<&mut Transform>,
-    camera: Query<(Entity, &OrbitCamera)>,
-    motion: Res<AccumulatedMouseMotion>,
-    looking: Res<Looking>,
-) {
-    const PITCH_SENS: f32 = YAW_SENS;
-    const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01;
-
-    let delta = -motion.delta;
-
-    let delta_pitch = delta.y * PITCH_SENS;
-    let delta_yaw = delta.x * YAW_SENS;
-
-    for (camera, OrbitCamera { target, offset }) in camera {
-        let target = transform
-            .get(*target)
-            .expect("Orbit camera target not found")
-            .translation;
-
-        let mut camera = transform.get_mut(camera).expect("Camera has no transform");
-
-        if **looking && motion.is_changed() {
-            let (yaw, pitch, roll) = camera.rotation.to_euler(EulerRot::YXZ);
-            camera.rotation = Quat::from_euler(
-                EulerRot::YXZ,
-                yaw + delta_yaw,
-                (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT),
-                roll,
-            );
-        }
-        camera.translation =
-            target - (camera.forward() * OrbitCamera::ORBIT_DISTANCE) + (camera.rotation * offset);
-    }
-}
-
-pub fn grabber(
-    mut clicks: MessageReader<MouseButtonInput>,
-    mut key: MessageReader<KeyboardInput>,
-    mut looking: ResMut<Looking>,
-    mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
-    console_state: Res<ConsoleOpen>,
-) {
-    #[allow(clippy::unwrap_used, reason = "there's only one primary window")]
-    let mut options = options.single_mut().unwrap();
-
-    let click = clicks.read().any(|e| e.button == MouseButton::Left);
-    let esc = key.read().any(|e| e.key_code == KeyCode::Escape);
-
-    if esc && click {
-    } else if **looking {
-        if esc {
-            **looking = false;
-            options.grab_mode = CursorGrabMode::None;
-            options.visible = true;
-        }
-    } else if click && !console_state.open {
-        **looking = true;
-        options.grab_mode = CursorGrabMode::Locked;
-        options.visible = false;
+        transform.translation = position.as_vec3()
+            - (transform.forward() * OrbitCamera::ORBIT_DISTANCE)
+            + (transform.rotation * offset);
     }
 }

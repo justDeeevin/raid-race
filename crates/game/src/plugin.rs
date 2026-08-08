@@ -1,75 +1,85 @@
-use crate::{
-    Quit,
-    component::OrbitCamera,
-    resource::{InputState, Looking, Me},
-    system::{
-        client::{self, ConnectCommand, DisconnectCommand},
-        player,
-        ui::hud::{self, HudRoot},
-    },
+use crate::system::{
+    client::{self, ConnectCommand, TokenTask},
+    player::{self, add_bindings_on_owner_spawn},
+    ui::hud,
 };
 use bevy::{
     app::{App, Update},
     ecs::{
-        entity::Entity,
-        observer::On,
         query::With,
-        schedule::{
-            IntoScheduleConfigs, SystemCondition,
-            common_conditions::{on_message, resource_exists},
-        },
-        system::{Commands, Query},
+        schedule::{IntoScheduleConfigs, common_conditions::resource_exists},
+        world::World,
     },
-    input::{keyboard::KeyboardInput, mouse::MouseButtonInput},
 };
 use bevy_console::AddConsoleCommand;
-use naia_bevy_client::{
-    Client, ClientConfig, DefaultClientTag, Plugin as ClientPlugin,
-    events::{ClientTickEvent, DespawnEntityEvent, SpawnEntityEvent},
+use bevy_inspector_egui::{
+    DefaultInspectorConfigPlugin,
+    bevy_egui::{EguiContext, EguiPrimaryContextPass, PrimaryEguiContext},
+    bevy_inspector,
+    egui::{ScrollArea, Window},
 };
-use raid_race_lib::protocol;
+use lightyear::prelude::client::ClientPlugins;
+use raid_race_lib::{
+    TICK_PERIOD,
+    component::alive::player::{CanJump, Player},
+    input::{Jump, Look, Walk},
+};
 
 pub fn hud(app: &mut App) {
     app.add_systems(Update, (hud::health_bar, hud::mana_bar))
+        .add_observer(hud::spawn)
+        .add_observer(hud::despawn)
+        .add_observer(hud::add_poison)
         .add_observer(hud::remove_poison);
 }
 
 pub fn client(app: &mut App) {
-    app.add_plugins(ClientPlugin::<DefaultClientTag>::new(
-        ClientConfig::default(),
-        protocol(),
+    app.add_plugins((
+        ClientPlugins {
+            tick_duration: TICK_PERIOD,
+        },
+        raid_race_lib::plugin,
     ))
     .add_systems(
         Update,
-        client::tick.run_if(on_message::<ClientTickEvent<DefaultClientTag>>),
+        client::wait_for_token.run_if(resource_exists::<TokenTask>),
     )
-    .add_observer(
-        |_: On<Quit>,
-         client: Client<DefaultClientTag>,
-         hud: Query<Entity, With<HudRoot>>,
-         camera: Query<Entity, With<OrbitCamera>>,
-         commands: Commands| {
-            client::disconnect(client, hud, camera, commands);
-        },
-    )
-    .add_console_command::<ConnectCommand, _>(client::connect_command)
-    .add_console_command::<DisconnectCommand, _>(client::disconnect_command);
+    .add_console_command::<ConnectCommand, _>(client::connect_command);
 }
 
 pub fn player(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            player::spawn.run_if(on_message::<SpawnEntityEvent<DefaultClientTag>>),
-            player::despawn.run_if(on_message::<DespawnEntityEvent<DefaultClientTag>>),
-            player::sync_sim,
-            player::camera,
-            player::grabber
-                .run_if(on_message::<KeyboardInput>.or_eager(on_message::<MouseButtonInput>)),
-            player::read_input.run_if(resource_exists::<Me>),
-        ),
-    )
-    .add_observer(player::send_input)
-    .init_resource::<Looking>()
-    .init_resource::<InputState>();
+    app.add_plugins(raid_race_lib::player::plugin)
+        .add_systems(Update, player::orbit)
+        .add_observer(player::spawn)
+        .add_observer(player::add_bindings_on_action_spawn::<Walk, Player, Player>)
+        .add_observer(player::add_bindings_on_action_spawn::<Jump, Player, Player>)
+        .add_observer(player::add_bindings_on_action_spawn::<Look, CanJump, Player>)
+        .add_observer(add_bindings_on_owner_spawn!(Player {
+            players: Player[walks: Walk, looks: Look],
+            canjumps: CanJump[jumps: Jump],
+        }));
+}
+
+pub fn inspector(app: &mut App) {
+    fn ui(world: &mut World) {
+        let Ok(mut ctx) = world
+            .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
+            .single(world)
+            .cloned()
+        else {
+            return;
+        };
+
+        Window::new("World Inspector")
+            .default_size((400.0, 300.0))
+            .show(ctx.get_mut(), |ui| {
+                ScrollArea::both().show(ui, |ui| {
+                    bevy_inspector::ui_for_world(world, ui);
+                    ui.allocate_space(ui.available_size());
+                })
+            });
+    }
+
+    app.add_plugins(DefaultInspectorConfigPlugin)
+        .add_systems(EguiPrimaryContextPass, ui);
 }

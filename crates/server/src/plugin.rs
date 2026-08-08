@@ -1,56 +1,57 @@
-use crate::{
-    resource::{Inputs, Room, UserEntities},
-    system::{
-        player,
-        server::{auth, join, leave, serve, tick},
-        status::{poison, stat_change},
-    },
+use crate::system::{
+    player,
+    server::{self, Ids},
+    status,
 };
-use bevy::{
-    app::{App, Startup, Update},
-    ecs::schedule::{IntoScheduleConfigs, common_conditions::on_message},
-};
-use naia_bevy_server::{
-    Plugin as NaiaServerPlugin, ServerConfig,
-    events::{AuthEvents, ConnectEvent, DisconnectEvent, TickEvent},
-};
+use bevy::app::{App, FixedUpdate, Startup, Update};
+use lightyear::prelude::server::ServerPlugins;
 use raid_race_lib::{
+    TICK_PERIOD,
     component::alive::status::{DefenseDown, DefenseUp, DpsDown, DpsUp},
-    protocol,
 };
 
 pub fn server(app: &mut App) {
-    app.add_plugins(NaiaServerPlugin::new(ServerConfig::default(), protocol()))
-        .init_resource::<Room>()
-        .init_resource::<UserEntities>()
-        .add_systems(Startup, serve)
-        .add_systems(
-            Update,
-            (
-                join.run_if(on_message::<ConnectEvent>),
-                leave.run_if(on_message::<DisconnectEvent>),
-                auth.run_if(on_message::<AuthEvents>),
-                tick.run_if(on_message::<TickEvent>),
-            ),
-        );
+    app.add_plugins((
+        ServerPlugins {
+            tick_duration: TICK_PERIOD,
+        },
+        raid_race_lib::plugin,
+    ))
+    .add_systems(Startup, server::serve)
+    .add_observer(server::start_join)
+    .add_observer(server::join)
+    .add_observer(server::leave)
+    .init_resource::<Ids>();
 }
 
 pub fn player(app: &mut App) {
-    app.add_observer(player::receive_input)
-        .add_observer(player::sync_sim)
-        .add_systems(Update, (player::apply_input, player::grounded))
-        .init_resource::<Inputs>();
+    use bevy::ecs::system::Query;
+    use lightyear::input::bei::prelude::Actions;
+    use raid_race_lib::component::alive::player::Player;
+
+    app.add_plugins(raid_race_lib::player::plugin)
+        .add_systems(
+            FixedUpdate,
+            (player::grounded, |query: Query<&Actions<Player>>| {
+                for _ in query {
+                    tracing::info!("actions!");
+                }
+            }),
+        )
+        .add_observer(player::landed)
+        .add_observer(player::jump_released)
+        .add_observer(player::leave_ground);
 }
 
 pub fn status(app: &mut App) {
     app.add_systems(
         Update,
         (
-            poison,
-            stat_change::<DefenseUp>,
-            stat_change::<DefenseDown>,
-            stat_change::<DpsUp>,
-            stat_change::<DpsDown>,
+            status::poison,
+            status::stat_change::<DefenseUp>,
+            status::stat_change::<DefenseDown>,
+            status::stat_change::<DpsUp>,
+            status::stat_change::<DpsDown>,
         ),
     );
 }

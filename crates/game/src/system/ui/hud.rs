@@ -3,62 +3,70 @@ use bevy::{
     color::Color,
     ecs::{
         change_detection::DetectChanges,
-        children,
         component::Component,
         entity::Entity,
+        hierarchy::Children,
+        lifecycle::{Add, Remove},
         observer::On,
-        system::{Commands, Query},
+        query::{Changed, With},
+        system::{Commands, Query, Single},
         world::Ref,
     },
+    scene::{CommandsSceneExt, Scene, bsn},
     text::{FontSize, TextFont},
     ui::{
         AlignItems, BackgroundColor, BorderColor, Display, FlexDirection, GridPlacement,
         JustifyContent, Node, RepeatedGridTrack, UiRect, percent, px, vh, vw, widget::Text,
     },
 };
-use raid_race_lib::component::alive::{
-    Health, Mana,
-    status::{Poison, PoisonRemoved},
-};
+use lightyear::{connection::client::Disconnected, prelude::Controlled};
+use raid_race_lib::component::alive::{Health, Mana, player::Player, status::Poison};
 
 pub fn health_bar(
-    bar: Query<(&mut Node, &HealthBar, &mut Text, &mut BackgroundColor)>,
-    health: Query<(Ref<Health>, Option<Ref<Poison>>)>,
+    bar: Query<(&mut Node, &HealthBar, &mut Text)>,
+    health: Query<&Health, Changed<Health>>,
 ) {
-    for (mut node, HealthBar(entity), mut text, mut color) in bar {
-        let (health, poison) = health.get(*entity).expect("Health bar target not found");
-        if health.is_changed() {
+    for (mut node, HealthBar(entity), mut text) in bar {
+        if let Ok(health) = health.get(*entity) {
+            tracing::info!("redrawing health bar");
             node.width = percent(100.0 * health.current as f32 / health.cap as f32);
             **text = format!("{}/{}", health.current, health.cap);
-        }
-        if let Some(poison) = poison
-            && poison.is_changed()
-        {
-            **color = HealthBar::PURPLE;
         }
     }
 }
 
-pub fn remove_poison(
-    event: On<PoisonRemoved>,
-    mut color: Query<(&HealthBar, &mut BackgroundColor)>,
-) {
-    let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
-        if event.from == entity.0 {
+pub fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
+    if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
+        if event.entity == **entity {
             Some(color)
         } else {
             None
         }
-    }) else {
-        return;
-    };
+    }) {
+        **color = HealthBar::PURPLE;
+    }
+}
 
-    **color = HealthBar::RED;
+pub fn remove_poison(
+    event: On<Remove, Poison>,
+    mut color: Query<(&HealthBar, &mut BackgroundColor)>,
+) {
+    if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
+        if event.entity == **entity {
+            Some(color)
+        } else {
+            None
+        }
+    }) {
+        **color = HealthBar::RED;
+    }
 }
 
 pub fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>) {
     for (mut node, ManaBar(entity), mut text) in bar {
-        let mana = mana.get(*entity).expect("Mana bar target not found");
+        let Ok(mana) = mana.get(*entity) else {
+            continue;
+        };
         if mana.is_changed() {
             node.width = percent(100.0 * mana.current as f32 / mana.cap as f32);
             text.0 = format!("{}/{}", mana.current, mana.cap);
@@ -66,100 +74,123 @@ pub fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Ma
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone, Copy)]
 pub struct HudRoot;
 
-pub fn spawn(mut commands: Commands, player: Entity) {
-    commands.spawn((
-        HudRoot,
+pub fn spawn(
+    event: On<Add, (Player, Controlled)>,
+    me: Query<(), (With<Health>, With<Mana>, With<Player>, With<Controlled>)>,
+    hud: Query<Entity, With<HudRoot>>,
+    mut commands: Commands,
+) {
+    if hud.is_empty() && me.get(event.entity).is_ok() {
+        commands.spawn_scene(scene(event.entity));
+    }
+}
+
+pub fn despawn(
+    _: On<Add, Disconnected>,
+    hud: Single<Entity, With<HudRoot>>,
+    mut commands: Commands,
+) {
+    commands.entity(*hud).despawn();
+}
+
+pub fn scene(target: Entity) -> impl Scene {
+    bsn! {
+        #Hud
+        HudRoot
         Node {
             width: percent(100),
             height: percent(100),
             display: Display::Grid,
             grid_template_rows: vec![RepeatedGridTrack::fr(3, 1.0)],
             grid_template_columns: vec![RepeatedGridTrack::percent(1, 100.0)],
-            ..Default::default()
-        },
-        children![
+        }
+        Children [
             (
+                #Crosshair
                 Node {
                     grid_row: GridPlacement::start(2),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                children![(
+                }
+                Children [
                     Node {
                         height: px(10),
                         width: px(10),
-                        ..Default::default()
-                    },
+                    }
                     BackgroundColor(Color::BLACK)
-                )]
+                ]
             ),
             (
+                #HudBottom
                 Node {
                     width: percent(100),
                     display: Display::Grid,
                     grid_row: GridPlacement::start(3),
                     grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
-                    margin: UiRect::horizontal(vw(3)).with_bottom(vh(5)),
-                    ..Default::default()
-                },
-                children![(
+                    margin: UiRect {
+                        left: vw(3),
+                        right: vw(3),
+                        bottom: vh(5),
+                    },
+                }
+                Children [
+                    #Bars
                     Node {
                         grid_column: GridPlacement::start(1),
                         flex_direction: FlexDirection::ColumnReverse,
                         justify_content: JustifyContent::End,
                         align_items: AlignItems::Start,
-                        ..Default::default()
-                    },
-                    children![
+                    }
+                    Children [
                         (
+                            #HealthBar
                             Node {
                                 height: vh(4),
                                 width: percent(100),
                                 border: UiRect::all(px(4)),
-                                ..Default::default()
-                            },
-                            BorderColor::all(Color::BLACK),
-                            children![(
-                                Node {
-                                    height: percent(100),
-                                    width: percent(100),
-                                    ..Default::default()
-                                },
-                                BackgroundColor(HealthBar::RED),
-                                HealthBar(player),
-                                Text::default(),
-                            ),]
+                            }
+                            BorderColor::all(Color::BLACK)
+                            Children [
+                                (
+                                    Node {
+                                        height: percent(100),
+                                        width: percent(100),
+                                    }
+                                    BackgroundColor(HealthBar::RED)
+                                    HealthBar(target)
+                                    Text::default()
+                                )
+                            ]
                         ),
                         (
+                            #ManaBar
                             Node {
                                 height: vh(2),
                                 width: percent(80),
                                 border: UiRect::all(px(3)),
-                                ..Default::default()
-                            },
-                            BorderColor::all(Color::BLACK),
-                            children![(
-                                Node {
-                                    height: percent(100),
-                                    width: percent(100),
-                                    ..Default::default()
-                                },
-                                BackgroundColor(Color::srgb_u8(0, 0, 255)),
-                                ManaBar(player),
-                                Text::default(),
-                                TextFont {
-                                    font_size: FontSize::Px(15.0),
-                                    ..Default::default()
-                                }
-                            )]
+                            }
+                            BorderColor::all(Color::BLACK)
+                            Children [
+                                (
+                                    Node {
+                                        height: percent(100),
+                                        width: percent(100),
+                                    }
+                                    BackgroundColor(Color::srgb_u8(0, 0, 255))
+                                    ManaBar(target)
+                                    Text::default()
+                                    TextFont {
+                                        font_size: FontSize::Px(15.0),
+                                    }
+                                )
+                            ]
                         )
                     ]
-                )]
-            ),
-        ],
-    ));
+                ]
+            )
+        ]
+    }
 }
