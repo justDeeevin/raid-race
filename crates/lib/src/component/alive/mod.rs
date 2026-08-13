@@ -34,6 +34,9 @@ impl Mana {
 pub struct Dps(pub u16);
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+/// Increases movement speed and attack rate[^1].
+///
+/// [^1]: DPS remains respected; thus, an increased agility will decrease the damage per hit.
 pub struct Agility(pub u8);
 
 impl Agility {
@@ -41,10 +44,14 @@ impl Agility {
 }
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+/// Cooldown reduction
 pub struct Cdr(pub u16);
 
 impl Cdr {
-    pub fn scale(&self) -> f32 {
+    /// Returns reduction factor for cooldowns.
+    ///
+    /// The max reduction is 30%. The value increases rationally (k = 15) with an asymptote at the max.
+    pub fn scaler(&self) -> f32 {
         const MAX_REDUCTION: f32 = 0.3;
         const HALFWAY_POINT: f32 = 15.0;
 

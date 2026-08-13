@@ -27,7 +27,7 @@ impl Poison {
 
         Self {
             source,
-            tick: Timer::from_seconds(BASE_POISON_PERIOD_SECS * cdr.scale(), TimerMode::Repeating),
+            tick: Timer::from_seconds(BASE_POISON_PERIOD_SECS * cdr.scaler(), TimerMode::Repeating),
             total: Timer::new(duration, TimerMode::Once),
         }
     }
@@ -58,7 +58,6 @@ pub struct DpsUp(pub StackableStatusEffect);
 pub struct DpsDown(pub StackableStatusEffect);
 
 #[derive(Component)]
-#[component(immutable)]
 pub struct Blind(pub Timer);
 
 #[derive(Serialize, Deserialize)]

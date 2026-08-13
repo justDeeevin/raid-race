@@ -27,9 +27,13 @@ fn main() {
 }
 
 #[derive(Default, Resource)]
+/// Generates unique ids for entities
+///
+/// Just ascending
 struct Ids(u64);
 
 impl Ids {
+    /// Generate a new ID
     pub fn get(&mut self) -> Id {
         self.0 += 1;
         Id(self.0 - 1)

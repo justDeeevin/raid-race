@@ -85,6 +85,7 @@ impl Binds for Look {
     }
 }
 
+/// Adds bindings to an action entity when it spawns
 pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     event: On<Insert, (Action<A>, ActionOf<Context>)>,
     actions: Query<&ActionOf<Context>, (With<Action<A>>, Without<Bindings>)>,
@@ -98,6 +99,13 @@ pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Compone
     }
 }
 
+/// Generates an observer system closure that adds bindings to actions owned by entities with the
+/// given component[^1] when the owner spawns.
+///
+/// This is for the case where the actions spawn before the owner. Actions that spawn after the
+/// owner will be handled by [`add_bindings_on_action_spawn`].
+///
+/// [^1]: That is, their `ActionOf` will target those entities.
 macro_rules! add_bindings_on_owner_spawn {
     ($owner:ty {$($owners:ident: $context:ty[$($actions:ident: $action:ty),* $(,)?]),* $(,)?}) => {{
         use ::lightyear::{input::bei::{self, prelude::Actions}, prelude::Controlled};

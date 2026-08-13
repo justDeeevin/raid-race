@@ -4,10 +4,10 @@ pub mod player;
 pub mod scene;
 
 use avian3d::{
+    PhysicsPlugins,
     dynamics::solver::islands::{IslandPlugin, IslandSleepingPlugin},
     interpolation::PhysicsInterpolationPlugin,
     physics_transform::PhysicsTransformPlugin,
-    PhysicsPlugins,
 };
 use bevy::{
     app::{App, PluginGroup, Startup},
@@ -18,7 +18,7 @@ use input::{Jump, Look, Walk};
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
     input::bei::prelude::InputPlugin,
-    prelude::{input::InputRegistryExt, AppComponentExt},
+    prelude::{AppComponentExt, input::InputRegistryExt},
 };
 use std::{
     net::{IpAddr, Ipv4Addr},

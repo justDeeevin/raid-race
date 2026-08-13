@@ -33,7 +33,7 @@ pub struct ConnectCommand {
     #[arg()]
     /// The address of the server.
     ///
-    /// This does not require a protocol prefix or a port number, but will accept them if
+    /// This does not require a port number, but will accept one if
     /// specified.
     pub address: String,
 }
@@ -46,24 +46,22 @@ pub struct DisconnectCommand;
 #[derive(Resource, Deref, DerefMut)]
 pub struct TokenTask(Task<ConnectToken>);
 
-pub fn connect(mut commands: Commands, server: IpAddr) {
-    let server_socket = SocketAddr::new(server, GAME_PORT);
+pub fn connect(mut commands: Commands, server: SocketAddr) {
     const CLIENT_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
     commands.spawn((
         Client,
         ReplicationReceiver,
         LocalAddr(SocketAddr::new(CLIENT_ADDR, 0)),
-        PeerAddr(server_socket),
+        PeerAddr(server),
         PingManager::default(),
         WebTransportClientIo {
             certificate_digest: include_str!("../../../server/digest.txt").into(),
             target: None,
-            // target: Some(format!("https://{server_socket}")),
         },
     ));
 
-    let task = IoTaskPool::get().spawn(get_token(server));
+    let task = IoTaskPool::get().spawn(get_token(server.ip()));
     commands.insert_resource(TokenTask(task))
 }
 
@@ -107,9 +105,11 @@ pub fn wait_for_token(
 pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, commands: Commands) {
     if let Some(Ok(ConnectCommand { address })) = cmd.take() {
         let addr = if address == "localhost" {
-            IpAddr::V4(Ipv4Addr::LOCALHOST)
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), GAME_PORT)
         } else if let Ok(addr) = address.parse() {
             addr
+        } else if let Ok(addr) = address.parse::<IpAddr>() {
+            SocketAddr::new(addr, GAME_PORT)
         } else {
             cmd.reply_failed("invalid address");
             return;
