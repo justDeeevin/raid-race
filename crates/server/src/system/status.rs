@@ -4,7 +4,7 @@ use bevy::{
         entity::Entity,
         system::{Commands, Query, Res},
     },
-    time::{Fixed, Time},
+    time::Time,
 };
 use raid_race_lib::component::alive::{
     Dps, Health,
@@ -13,13 +13,14 @@ use raid_race_lib::component::alive::{
 
 pub fn poison(
     mut commands: Commands,
-    time: Res<Time<Fixed>>,
+    time: Res<Time>,
     afflicted: Query<(Entity, &mut Health, &mut Poison)>,
     damagers: Query<&Dps>,
 ) {
     for (entity, mut health, mut poison) in afflicted {
         poison.tick.tick(time.delta());
         poison.total.tick(time.delta());
+
         if poison.total.is_finished() {
             commands.entity(entity).remove::<Poison>();
         } else if poison.tick.just_finished() {
@@ -32,7 +33,7 @@ pub fn stat_change<
     T: Component<Mutability = Mutable> + std::ops::DerefMut<Target = StackableStatusEffect>,
 >(
     mut commands: Commands,
-    time: Res<Time<Fixed>>,
+    time: Res<Time>,
     effects: Query<(Entity, &mut T)>,
 ) {
     for (entity, mut effect) in effects {

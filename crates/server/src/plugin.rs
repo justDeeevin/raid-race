@@ -25,19 +25,8 @@ pub fn server(app: &mut App) {
 }
 
 pub fn player(app: &mut App) {
-    use bevy::ecs::system::Query;
-    use lightyear::input::bei::prelude::Actions;
-    use raid_race_lib::component::alive::player::Player;
-
     app.add_plugins(raid_race_lib::player::plugin)
-        .add_systems(
-            FixedUpdate,
-            (player::grounded, |query: Query<&Actions<Player>>| {
-                for _ in query {
-                    tracing::info!("actions!");
-                }
-            }),
-        )
+        .add_systems(FixedUpdate, player::grounded)
         .add_observer(player::landed)
         .add_observer(player::jump_released)
         .add_observer(player::leave_ground);

@@ -2,27 +2,23 @@
 use super::Defense;
 #[cfg(feature = "server")]
 use bevy::ecs::{component::Mutable, lifecycle::HookContext, world::DeferredWorld};
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "server")]
 use std::ops::{AddAssign, DerefMut, SubAssign};
 
 use super::{Cdr, Dps};
 use bevy::{
-    ecs::{component::Component, entity::Entity, event::Event, system::Query},
+    ecs::{component::Component, entity::Entity, system::Query},
     prelude::{Deref, DerefMut},
     time::{Timer, TimerMode},
 };
 use std::{num::NonZero, time::Duration};
 
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize)]
 pub struct Poison {
     source: Entity,
     pub tick: Timer,
     pub total: Timer,
-}
-
-#[derive(Event)]
-pub struct PoisonRemoved {
-    pub from: Entity,
 }
 
 impl Poison {
@@ -47,17 +43,17 @@ impl Poison {
     }
 }
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
 #[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DefenseUp(pub StackableStatusEffect);
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
 #[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DefenseDown(pub StackableStatusEffect);
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
 #[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DpsUp(pub StackableStatusEffect);
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
 #[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DpsDown(pub StackableStatusEffect);
 
@@ -65,6 +61,7 @@ pub struct DpsDown(pub StackableStatusEffect);
 #[component(immutable)]
 pub struct Blind(pub Timer);
 
+#[derive(Serialize, Deserialize)]
 pub struct StackableStatusEffect {
     pub stacks: NonZero<u8>,
     timer: Timer,

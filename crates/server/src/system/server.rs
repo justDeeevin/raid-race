@@ -26,10 +26,14 @@ use lightyear::{
     prelude::{Identity, LocalAddr, ReplicationSender},
     webtransport::server::WebTransportServerIo,
 };
-use raid_race_lib::{AUTH_PORT, GAME_PORT, SERVER_ADDR};
+use raid_race_lib::{
+    AUTH_PORT, GAME_PORT, SERVER_ADDR,
+    component::alive::{Cdr, status::Poison},
+};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
+    time::Duration,
 };
 use tracing::info;
 use wtransport::tls::{Certificate, CertificateChain, PrivateKey};

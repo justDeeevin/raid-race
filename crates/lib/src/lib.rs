@@ -13,10 +13,7 @@ use bevy::{
     app::{App, PluginGroup, Startup},
     scene::SpawnListSystem,
 };
-use component::alive::{
-    player::{CanJump, Pitch, Player},
-    Agility, Cdr, Defense, Dps, Health, Luck, Mana,
-};
+use component::alive::{player::*, status::*, *};
 use input::{Jump, Look, Walk};
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
@@ -40,7 +37,10 @@ pub fn plugin(app: &mut App) {
         }
     }
 
-    replicate!(Player, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch);
+    replicate!(
+        Player, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
+        DefenseUp, DpsUp, DpsDown
+    );
 
     app.add_plugins(InputPlugin::<Player>::default())
         .add_plugins(InputPlugin::<CanJump>::default())

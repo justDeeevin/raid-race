@@ -17,7 +17,7 @@ fn main() {
             }),
             plugin::server,
             plugin::player,
-            // plugin::status,
+            plugin::status,
         ))
         .run();
 }
