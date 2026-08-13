@@ -66,6 +66,8 @@ impl Player {
     ) -> EntityCommands<'a> {
         const FOOT_HEIGHT: f64 = 0.02;
 
+        let client_replicate = Replicate::to_clients(NetworkTarget::Single(id));
+
         commands.spawn((
             (
                 PlayerComponent(id),
@@ -78,8 +80,8 @@ impl Player {
                 Cdr(self.cdr),
                 Luck(self.luck),
                 Pitch(0.0),
-                actions!(PlayerComponent[Action::<Walk>::new(), Action::<Look>::new()]),
-                actions!(CanJump[Action::<Jump>::new()]),
+                actions!(PlayerComponent[(Action::<Walk>::new(), client_replicate.clone()), (Action::<Look>::new(), client_replicate.clone())]),
+                actions!(CanJump[(Action::<Jump>::new(), client_replicate.clone())]),
             ),
             physics_components(),
             self.init_pos,
