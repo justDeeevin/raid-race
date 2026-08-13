@@ -10,12 +10,16 @@ use bevy::{
         entity::Entity,
         hierarchy::Children,
         lifecycle::{Add, Insert},
+        message::MessageReader,
         observer::On,
         query::{With, Without},
         spawn::SpawnRelated,
-        system::{Commands, Query},
+        system::{Commands, Query, Single},
     },
-    input::keyboard::KeyCode,
+    input::{
+        keyboard::{KeyCode, KeyboardInput},
+        mouse::{MouseButton, MouseButtonInput},
+    },
     math::{
         EulerRot, Quat, Vec3,
         primitives::{Capsule3d, Cuboid},
@@ -24,6 +28,7 @@ use bevy::{
     pbr::{MeshMaterial3d, StandardMaterial},
     scene::{EntityCommandsSceneExt, bsn},
     transform::components::Transform,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_console::{
     ConsoleCommand,
@@ -36,7 +41,7 @@ use lightyear::prelude::{
 use raid_race_lib::{
     component::alive::{
         Id,
-        player::{Pitch, Player},
+        player::{Looking, Pitch, Player},
     },
     input::{Jump, Look, Walk},
     player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
@@ -178,14 +183,39 @@ pub fn orbit(
             targets.get(*target).expect("orbit camera target not found");
 
         transform.rotation = Quat::from_euler(
-            EulerRot::XYZ,
-            **pitch,
-            rotation.to_euler(EulerRot::XYZ).1 as f32,
-            transform.rotation.to_euler(EulerRot::XYZ).2,
+            EulerRot::YXZ,
+            rotation.to_euler(EulerRot::YXZ).0 as f32,
+            **pitch as f32,
+            transform.rotation.to_euler(EulerRot::YXZ).2,
         );
 
         transform.translation = position.as_vec3()
             - (transform.forward() * OrbitCamera::ORBIT_DISTANCE)
             + (transform.rotation * offset);
+    }
+}
+
+pub fn grabber(
+    mut button: MessageReader<MouseButtonInput>,
+    mut key: MessageReader<KeyboardInput>,
+    player: Single<(Entity, Option<&Looking>), (With<Player>, With<Controlled>)>,
+    mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
+    mut commands: Commands,
+) {
+    #[allow(clippy::unwrap_used, reason = "there's always only one primary window")]
+    let mut options = options.single_mut().unwrap();
+    let (entity, looking) = *player;
+    let click = button.read().any(|b| b.button == MouseButton::Left);
+    let esc = key.read().any(|k| k.key_code == KeyCode::Escape);
+
+    if click && esc {
+    } else if click && looking.is_none() {
+        commands.entity(entity).insert(Looking);
+        options.visible = false;
+        options.grab_mode = CursorGrabMode::Locked;
+    } else if esc && looking.is_some() {
+        commands.entity(entity).remove::<Looking>();
+        options.visible = true;
+        options.grab_mode = CursorGrabMode::None;
     }
 }

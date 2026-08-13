@@ -10,6 +10,7 @@ use avian3d::{
         mass_properties::components::ComputedMass,
     },
     math::Vector,
+    physics_transform::Rotation,
 };
 use bevy::{
     app::App,
@@ -18,7 +19,7 @@ use bevy::{
         observer::On,
         system::{Query, Res},
     },
-    math::{Dir3, EulerRot, Quat, Vec3},
+    math::{DQuat, Dir3, EulerRot, Vec3},
     time::Time,
     transform::components::Transform,
 };
@@ -75,22 +76,25 @@ fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity>) {
     }
 }
 
-fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Transform)>) {
-    const YAW_SENS: f32 = 0.003;
-    const PITCH_SENS: f32 = YAW_SENS;
+fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
+    const YAW_SENS: f64 = 0.003;
+    const PITCH_SENS: f64 = YAW_SENS;
+    const MAX_PITCH: f64 = std::f64::consts::FRAC_PI_2;
 
-    let Ok((mut pitch, mut transform)) = params.get_mut(event.context) else {
+    let delta = -event.value;
+
+    let Ok((mut pitch, mut rotation)) = params.get_mut(event.context) else {
         return;
     };
 
-    **pitch += event.value.x * PITCH_SENS;
+    **pitch = (**pitch + (delta.y as f64 * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
 
-    let (roll, old_yaw, pitch) = transform.rotation.to_euler(EulerRot::XYZ);
-    transform.rotation = Quat::from_euler(
-        EulerRot::XYZ,
-        roll,
-        old_yaw + (event.value.y * YAW_SENS),
+    let (yaw, pitch, roll) = rotation.to_euler(EulerRot::YXZ);
+    **rotation = DQuat::from_euler(
+        EulerRot::YXZ,
+        yaw + (delta.x as f64 * YAW_SENS),
         pitch,
+        roll,
     );
 }
 

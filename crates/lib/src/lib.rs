@@ -39,11 +39,12 @@ pub fn plugin(app: &mut App) {
 
     replicate!(
         Player, Id, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
-        DefenseUp, DpsUp, DpsDown
+        DefenseUp, DpsUp, DpsDown, CanJump, Looking,
     );
 
     app.add_plugins(InputPlugin::<Player>::default())
         .add_plugins(InputPlugin::<CanJump>::default())
+        .add_plugins(InputPlugin::<Looking>::default())
         .register_input_action::<Walk>()
         .register_input_action::<Jump>()
         .register_input_action::<Look>();

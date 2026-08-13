@@ -1,5 +1,5 @@
 use crate::system::{
-    client::{self, ConnectCommand, TokenTask},
+    client::{self, ConnectCommand, DisconnectCommand, TokenTask},
     player::{self, WhoAmI, add_bindings_on_owner_spawn},
     ui::hud,
 };
@@ -7,9 +7,13 @@ use bevy::{
     app::{App, Update},
     ecs::{
         query::With,
-        schedule::{IntoScheduleConfigs, common_conditions::resource_exists},
+        schedule::{
+            IntoScheduleConfigs, SystemCondition,
+            common_conditions::{on_message, resource_exists},
+        },
         world::World,
     },
+    input::{keyboard::KeyboardInput, mouse::MouseButtonInput},
 };
 use bevy_console::AddConsoleCommand;
 use bevy_inspector_egui::{
@@ -21,7 +25,7 @@ use bevy_inspector_egui::{
 use lightyear::prelude::client::ClientPlugins;
 use raid_race_lib::{
     TICK_PERIOD,
-    component::alive::player::{CanJump, Player},
+    component::alive::player::{CanJump, Looking, Player},
     input::{Jump, Look, Walk},
 };
 
@@ -44,23 +48,33 @@ pub fn client(app: &mut App) {
         Update,
         client::wait_for_token.run_if(resource_exists::<TokenTask>),
     )
-    .add_console_command::<ConnectCommand, _>(client::connect_command);
+    .add_console_command::<ConnectCommand, _>(client::connect_command)
+    .add_console_command::<DisconnectCommand, _>(client::disconnect_command);
 }
 
 pub fn player(app: &mut App) {
     app.add_plugins(raid_race_lib::player::plugin)
-        .add_systems(Update, player::orbit)
+        .add_systems(
+            Update,
+            (
+                player::orbit,
+                player::grabber
+                    .run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
+            ),
+        )
         .add_observer(player::spawn)
         .add_observer(player::add_bindings_on_action_spawn::<Walk, Player, Player>)
-        .add_observer(player::add_bindings_on_action_spawn::<Jump, Player, Player>)
-        .add_observer(player::add_bindings_on_action_spawn::<Look, CanJump, Player>)
+        .add_observer(player::add_bindings_on_action_spawn::<Look, Looking, Player>)
+        .add_observer(player::add_bindings_on_action_spawn::<Jump, CanJump, Player>)
         .add_observer(add_bindings_on_owner_spawn!(Player {
-            players: Player[walks: Walk, looks: Look],
+            players: Player[walks: Walk],
+            lookings: Looking[looks: Look],
             canjumps: CanJump[jumps: Jump],
         }))
         .add_console_command::<WhoAmI, _>(player::whoami);
 }
 
+#[allow(unused)]
 pub fn inspector(app: &mut App) {
     fn ui(world: &mut World) {
         let Ok(mut ctx) = world

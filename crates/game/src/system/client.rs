@@ -15,7 +15,7 @@ use bevy_console::{
     clap::{self, Parser},
 };
 use lightyear::{
-    connection::client::{Client, Connect},
+    connection::client::{Client, Connect, Connected, Disconnect},
     netcode::{
         CONNECT_TOKEN_BYTES, ConnectToken, NetcodeClient, auth::Authentication,
         client_plugin::NetcodeConfig,
@@ -103,18 +103,36 @@ pub fn wait_for_token(
 }
 
 pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, commands: Commands) {
-    if let Some(Ok(ConnectCommand { address })) = cmd.take() {
-        let addr = if address == "localhost" {
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), GAME_PORT)
-        } else if let Ok(addr) = address.parse() {
-            addr
-        } else if let Ok(addr) = address.parse::<IpAddr>() {
-            SocketAddr::new(addr, GAME_PORT)
-        } else {
-            cmd.reply_failed("invalid address");
-            return;
-        };
+    let Some(Ok(ConnectCommand { address })) = cmd.take() else {
+        return;
+    };
 
-        connect(commands, addr);
+    let addr = if address == "localhost" {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), GAME_PORT)
+    } else if let Ok(addr) = address.parse() {
+        addr
+    } else if let Ok(addr) = address.parse::<IpAddr>() {
+        SocketAddr::new(addr, GAME_PORT)
+    } else {
+        cmd.reply_failed("invalid address");
+        return;
+    };
+
+    connect(commands, addr);
+}
+
+pub fn disconnect_command(
+    mut cmd: ConsoleCommand<DisconnectCommand>,
+    client: Query<Entity, (With<Client>, With<Connected>)>,
+    mut commands: Commands,
+) {
+    if cmd.take().is_none_or(|r| r.is_err()) {
+        return;
+    }
+
+    if let Ok(entity) = client.single() {
+        commands.trigger(Disconnect { entity });
+    } else {
+        cmd.reply_failed("not connected");
     }
 }

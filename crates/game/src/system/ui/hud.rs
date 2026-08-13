@@ -28,7 +28,6 @@ pub fn health_bar(
 ) {
     for (mut node, HealthBar(entity), mut text) in bar {
         if let Ok(health) = health.get(*entity) {
-            tracing::info!("redrawing health bar");
             node.width = percent(100.0 * health.current as f32 / health.cap as f32);
             **text = format!("{}/{}", health.current, health.cap);
         }
