@@ -1,9 +1,12 @@
 use crate::system::{
-    player,
-    server::{self, Ids},
+    console, player,
+    server::{self, ClientIds},
     status,
 };
-use bevy::app::{App, FixedUpdate, Startup, Update};
+use bevy::{
+    app::{App, FixedUpdate, Startup, Update},
+    platform::cell::SyncCell,
+};
 use lightyear::prelude::server::ServerPlugins;
 use raid_race_lib::{
     TICK_PERIOD,
@@ -21,7 +24,7 @@ pub fn server(app: &mut App) {
     .add_observer(server::start_join)
     .add_observer(server::join)
     .add_observer(server::leave)
-    .init_resource::<Ids>();
+    .init_resource::<ClientIds>();
 }
 
 pub fn player(app: &mut App) {
@@ -43,4 +46,14 @@ pub fn status(app: &mut App) {
             status::stat_change::<DpsDown>,
         ),
     );
+}
+
+pub fn console(app: &mut App) {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(console::thread(tx));
+
+    console::handle(SyncCell::new(rx), app);
+
+    app.add_observer(console::poison);
 }

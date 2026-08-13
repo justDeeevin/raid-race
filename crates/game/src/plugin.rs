@@ -1,6 +1,6 @@
 use crate::system::{
     client::{self, ConnectCommand, TokenTask},
-    player::{self, add_bindings_on_owner_spawn},
+    player::{self, WhoAmI, add_bindings_on_owner_spawn},
     ui::hud,
 };
 use bevy::{
@@ -57,7 +57,8 @@ pub fn player(app: &mut App) {
         .add_observer(add_bindings_on_owner_spawn!(Player {
             players: Player[walks: Walk, looks: Look],
             canjumps: CanJump[jumps: Jump],
-        }));
+        }))
+        .add_console_command::<WhoAmI, _>(player::whoami);
 }
 
 pub fn inspector(app: &mut App) {

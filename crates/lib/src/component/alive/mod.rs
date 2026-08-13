@@ -9,6 +9,10 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+/// Unique identifier for living entities
+pub struct Id(pub u64);
+
+#[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
 pub struct Health(pub Meter);
 
 impl Health {

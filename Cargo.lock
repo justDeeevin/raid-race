@@ -7230,6 +7230,7 @@ dependencies = [
  "async-net",
  "avian3d",
  "bevy",
+ "clap",
  "hakari",
  "lightyear",
  "raid-race-lib",

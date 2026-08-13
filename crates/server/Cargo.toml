@@ -19,6 +19,7 @@ async-lock = "3.4.2"
 async-net.workspace = true
 rand = "0.10.2"
 wtransport = "0.6.1"
+clap = { version = "4.6.6", features = ["derive"] }
 
 [build-dependencies]
 wtransport = "0.6.1"

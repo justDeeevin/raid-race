@@ -1,3 +1,5 @@
+use crate::Ids;
+
 use super::entity;
 use async_lock::RwLock;
 use async_net::TcpListener;
@@ -9,7 +11,7 @@ use bevy::{
         observer::On,
         query::With,
         resource::Resource,
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, ResMut},
     },
     prelude::{Deref, DerefMut},
     tasks::IoTaskPool,
@@ -26,20 +28,16 @@ use lightyear::{
     prelude::{Identity, LocalAddr, ReplicationSender},
     webtransport::server::WebTransportServerIo,
 };
-use raid_race_lib::{
-    AUTH_PORT, GAME_PORT, SERVER_ADDR,
-    component::alive::{Cdr, status::Poison},
-};
+use raid_race_lib::{AUTH_PORT, GAME_PORT, SERVER_ADDR};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
-    time::Duration,
 };
 use tracing::info;
 use wtransport::tls::{Certificate, CertificateChain, PrivateKey};
 
 #[derive(Resource, Deref, DerefMut, Default)]
-pub struct Ids(Arc<RwLock<HashSet<u64>>>);
+pub struct ClientIds(Arc<RwLock<HashSet<u64>>>);
 
 // VERSION 0
 const PROTOCOL_ID: u64 = 0;
@@ -50,7 +48,7 @@ const PRIVATE_KEY: Key = [
     144, 145, 102, 85, 244, 9, 166, 80, 117, 193, 11, 0,
 ];
 
-pub fn serve(mut commands: Commands, ids: Res<Ids>) {
+pub fn serve(mut commands: Commands, ids: Res<ClientIds>) {
     let entity = commands
         .spawn((
             NetcodeServer::new(
@@ -128,7 +126,8 @@ pub fn start_join(event: On<Add, LinkOf>, mut commands: Commands) {
 pub fn join(
     event: On<Add, Connected>,
     id: Query<&RemoteId, With<ClientOf>>,
-    ids: Res<Ids>,
+    client_ids: Res<ClientIds>,
+    mut ids: ResMut<Ids>,
     mut commands: Commands,
 ) {
     let Ok(RemoteId(id)) = id.get(event.entity) else {
@@ -137,14 +136,18 @@ pub fn join(
 
     entity::player(100, 40, 100)
         .build()
-        .spawn(&mut commands, *id, event.entity);
+        .spawn(&mut commands, *id, &mut ids, event.entity);
 
     if let PeerId::Netcode(id) = id {
-        ids.write_blocking().insert(*id);
+        client_ids.write_blocking().insert(*id);
     }
 }
 
-pub fn leave(event: On<Add, Disconnected>, id: Query<&RemoteId, With<ClientOf>>, ids: Res<Ids>) {
+pub fn leave(
+    event: On<Add, Disconnected>,
+    id: Query<&RemoteId, With<ClientOf>>,
+    ids: Res<ClientIds>,
+) {
     if let Ok(RemoteId(PeerId::Netcode(id))) = id.get(event.entity) {
         ids.write_blocking().remove(id);
     };

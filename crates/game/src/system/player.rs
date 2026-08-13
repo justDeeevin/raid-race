@@ -25,15 +25,42 @@ use bevy::{
     scene::{EntityCommandsSceneExt, bsn},
     transform::components::Transform,
 };
+use bevy_console::{
+    ConsoleCommand,
+    clap::{self, Parser},
+};
 use lightyear::prelude::{
     Controlled,
     input::bei::{Action, ActionOf, Binding, Bindings, Cardinal, InputAction, bindings},
 };
 use raid_race_lib::{
-    component::alive::player::{Pitch, Player},
+    component::alive::{
+        Id,
+        player::{Pitch, Player},
+    },
     input::{Jump, Look, Walk},
     player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
 };
+
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "whoami")]
+/// Print the entity ID of the currently controlled player
+pub struct WhoAmI;
+
+pub fn whoami(
+    mut command: ConsoleCommand<WhoAmI>,
+    player: Query<&Id, (With<Player>, With<Controlled>)>,
+) {
+    if command.take().is_none_or(|c| c.is_err()) {
+        return;
+    }
+
+    if let Ok(id) = player.single() {
+        command.reply_ok(id.to_string());
+    } else {
+        command.reply_failed("no player found");
+    }
+}
 
 // TODO: configurable
 pub trait Binds: InputAction {

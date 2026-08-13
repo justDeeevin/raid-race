@@ -38,7 +38,7 @@ pub fn plugin(app: &mut App) {
     }
 
     replicate!(
-        Player, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
+        Player, Id, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
         DefenseUp, DpsUp, DpsDown
     );
 

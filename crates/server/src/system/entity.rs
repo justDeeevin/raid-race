@@ -28,6 +28,8 @@ use raid_race_lib::{
 };
 use typed_builder::TypedBuilder;
 
+use crate::Ids;
+
 #[derive(TypedBuilder)]
 #[builder(builder_method(vis = ""))]
 pub struct Player {
@@ -59,6 +61,7 @@ impl Player {
         &self,
         commands: &'a mut Commands,
         id: PeerId,
+        ids: &mut Ids,
         owner: Entity,
     ) -> EntityCommands<'a> {
         const FOOT_HEIGHT: f64 = 0.02;
@@ -66,6 +69,7 @@ impl Player {
         commands.spawn((
             (
                 PlayerComponent(id),
+                ids.get(),
                 Health::new(self.health),
                 Mana::new(self.mana),
                 Dps(self.dps),
