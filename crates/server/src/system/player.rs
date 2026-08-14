@@ -46,10 +46,15 @@ pub fn grounded(
 pub fn landed(
     event: On<Add, Grounded>,
     mut commands: Commands,
-    jumps: Query<&TriggerState, With<Action<Jump>>>,
+    jumps: Query<(&ActionOf<CanJump>, &TriggerState), With<Action<Jump>>>,
 ) {
-    if let Ok(jump) = jumps.get(event.entity)
-        && *jump == TriggerState::None
+    if let Some(jump) = jumps.iter().find_map(|(of, state)| {
+        if **of == event.entity {
+            Some(state)
+        } else {
+            None
+        }
+    }) && *jump == TriggerState::None
     {
         commands.entity(event.entity).insert(CanJump);
     }

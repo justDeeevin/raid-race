@@ -2,13 +2,10 @@ use avian3d::{
     collision::collider::{Collider, Sensor},
     physics_transform::Position,
 };
-use bevy::{
-    ecs::{
-        children,
-        entity::Entity,
-        system::{Commands, EntityCommands},
-    },
-    transform::components::Transform,
+use bevy::ecs::{
+    children,
+    entity::Entity,
+    system::{Commands, EntityCommands},
 };
 use lightyear::{
     connection::network_target::NetworkTarget,
@@ -24,7 +21,7 @@ use raid_race_lib::{
         player::{CanJump, Looking, Pitch, Player as PlayerComponent},
     },
     input::{Jump, Look, Walk},
-    player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS, physics_components},
+    player::{PLAYER_HEIGHT, PLAYER_RADIUS, physics_components},
 };
 use typed_builder::TypedBuilder;
 
@@ -44,7 +41,7 @@ pub struct Player {
     cdr: u16,
     #[builder(default)]
     luck: u8,
-    #[builder(default=Position::from_xyz(0.0, PLAYER_CAPSULE_LENGTH / 2.0, 0.0))]
+    #[builder(default=Position::from_xyz(0.0, PLAYER_HEIGHT / 2.0, 0.0))]
     init_pos: Position,
 }
 
@@ -95,7 +92,7 @@ impl Player {
             children![(
                 Collider::cylinder(PLAYER_RADIUS, FOOT_HEIGHT),
                 Sensor,
-                Transform::from_xyz(0.0, ((-PLAYER_HEIGHT - FOOT_HEIGHT) / 2.0) as f32, 0.0),
+                Position::from_xyz(0.0, (-PLAYER_HEIGHT - FOOT_HEIGHT) / 2.0, 0.0),
             )],
         ))
     }

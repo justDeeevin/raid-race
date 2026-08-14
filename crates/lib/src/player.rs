@@ -5,7 +5,7 @@ use crate::{
 use avian3d::{
     collision::collider::Collider,
     dynamics::rigid_body::{
-        Friction, LinearVelocity, LockedAxes, RigidBody,
+        LinearVelocity, LockedAxes, RigidBody,
         forces::{Forces, ReadRigidBodyForces, WriteRigidBodyForces},
         mass_properties::components::ComputedMass,
     },
@@ -37,7 +37,7 @@ fn walk(
     time: Res<Time>,
 ) {
     const MAX_SPEED: f32 = 5.0;
-    const MAX_ACCELERATION: f64 = 20.0;
+    const MAX_ACCELERATION: f64 = 40.0;
 
     let Ok((mass, transform, agility, mut forces)) = params.get_mut(event.context) else {
         return;
@@ -47,9 +47,11 @@ fn walk(
 
     let max_delta_v = MAX_ACCELERATION * delta_t;
 
-    let move_dir = Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y))
-        .ok()
-        .map(|d| transform.rotation * d);
+    let Ok(move_dir) =
+        Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| transform.rotation * d)
+    else {
+        return;
+    };
 
     let velocity = {
         let t = forces.linear_velocity();
@@ -58,7 +60,6 @@ fn walk(
 
     let target_velocity = move_dir
         .map(|d| d * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as f32)))
-        .unwrap_or_default()
         .as_dvec3();
 
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
@@ -107,6 +108,5 @@ pub fn physics_components() -> impl Bundle {
         RigidBody::Dynamic,
         Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH),
         LockedAxes::ROTATION_LOCKED,
-        Friction::new(0.0),
     )
 }

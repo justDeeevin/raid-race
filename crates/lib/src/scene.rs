@@ -1,5 +1,7 @@
 use avian3d::{
-    collision::collider::Collider, dynamics::rigid_body::RigidBody, physics_transform::Position,
+    collision::collider::Collider,
+    dynamics::rigid_body::{Friction, RigidBody},
+    physics_transform::Position,
 };
 use bevy::{
     asset::asset_value,
@@ -20,6 +22,7 @@ pub fn test() -> impl SceneList {
             Collider::cuboid(100.0, 1.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 1.0, 100.0)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            Friction::new(3.0)
         ),
         (
             #FrontWall
