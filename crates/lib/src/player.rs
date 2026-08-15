@@ -1,5 +1,8 @@
 use crate::{
-    component::alive::{Agility, player::Pitch},
+    component::alive::{
+        Agility,
+        player::{Grounded, Pitch, Player},
+    },
     input::{Jump, Look, Walk},
 };
 use avian3d::{
@@ -11,13 +14,16 @@ use avian3d::{
     },
     math::Vector,
     physics_transform::Rotation,
+    spatial_query::{RayCaster, RayHits},
 };
 use bevy::{
-    app::App,
+    app::{App, FixedUpdate},
     ecs::{
         bundle::Bundle,
+        entity::Entity,
         observer::On,
-        system::{Query, Res},
+        query::With,
+        system::{Commands, Query, Res},
     },
     math::{DQuat, Dir3, EulerRot, Vec3},
     time::Time,
@@ -69,7 +75,7 @@ fn walk(
     forces.apply_force(required_acceleration * mass.value());
 }
 
-fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity>) {
+fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity, With<Grounded>>) {
     const JUMP_SPEED: f64 = 3.0;
 
     if let Ok(mut velocity) = velocity.get_mut(event.context) {
@@ -99,8 +105,34 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
     );
 }
 
+fn grounded(
+    casts: Query<(Entity, &RayHits), With<Player>>,
+    grounded: Query<(), With<Grounded>>,
+    mut commands: Commands,
+) {
+    const MIN_ANGLE: f64 = 30_f64.to_radians();
+    const MAX_DISTANCE: f64 = 0.1;
+
+    let sin = MIN_ANGLE.sin();
+
+    for (player, hits) in casts {
+        if hits.iter().any(|hit| {
+            hit.normal.dot(Vector::Y) >= hit.normal.length() * sin && hit.distance <= MAX_DISTANCE
+        }) {
+            if grounded.get(player).is_err() {
+                commands.entity(player).insert(Grounded);
+            }
+        } else if grounded.get(player).is_ok() {
+            commands.entity(player).remove::<Grounded>();
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
-    app.add_observer(walk).add_observer(jump).add_observer(look);
+    app.add_systems(FixedUpdate, grounded)
+        .add_observer(walk)
+        .add_observer(jump)
+        .add_observer(look);
 }
 
 pub fn physics_components() -> impl Bundle {
@@ -108,5 +140,6 @@ pub fn physics_components() -> impl Bundle {
         RigidBody::Dynamic,
         Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH),
         LockedAxes::ROTATION_LOCKED,
+        RayCaster::new(Vector::new(0.0, -PLAYER_HEIGHT / 2.0, 0.0), Dir3::NEG_Y),
     )
 }

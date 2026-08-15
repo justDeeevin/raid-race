@@ -14,7 +14,7 @@ use bevy::{
     scene::SpawnListSystem,
 };
 use component::alive::{player::*, status::*, *};
-use input::{Jump, Look, Walk};
+use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
     prediction::registry::PredictionBuilderExt,
@@ -42,13 +42,12 @@ pub fn plugin(app: &mut App) {
 
     replicate!(
         Player, Id, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
-        DefenseUp, DpsUp, DpsDown, CanJump,
+        DefenseUp, DpsUp, DpsDown,
     );
 
     app.component::<Pitch>().predict();
 
     app.add_plugins(InputPlugin::<Player>::default())
-        .add_plugins(InputPlugin::<CanJump>::default())
         .register_input_action::<Walk>()
         .register_input_action::<Jump>()
         .register_input_action::<Look>();

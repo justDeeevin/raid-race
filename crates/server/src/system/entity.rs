@@ -1,9 +1,6 @@
-use avian3d::{
-    collision::collider::{Collider, Sensor},
-    physics_transform::Position,
-};
+use crate::Ids;
+use avian3d::physics_transform::Position;
 use bevy::ecs::{
-    children,
     entity::Entity,
     system::{Commands, EntityCommands},
 };
@@ -18,14 +15,12 @@ use lightyear::{
 use raid_race_lib::{
     component::alive::{
         Agility, Cdr, Defense, Dps, Health, Luck, Mana,
-        player::{CanJump, Pitch, Player as PlayerComponent},
+        player::{Pitch, Player as PlayerComponent},
     },
     input::{Jump, Look, Walk},
-    player::{PLAYER_HEIGHT, PLAYER_RADIUS, physics_components},
+    player::{PLAYER_HEIGHT, physics_components},
 };
 use typed_builder::TypedBuilder;
-
-use crate::Ids;
 
 #[derive(TypedBuilder)]
 #[builder(builder_method(vis = ""))]
@@ -61,8 +56,6 @@ impl Player {
         ids: &mut Ids,
         owner: Entity,
     ) -> EntityCommands<'a> {
-        const FOOT_HEIGHT: f64 = 0.02;
-
         let client_replicate = Replicate::to_clients(NetworkTarget::Single(id));
 
         commands.spawn((
@@ -77,8 +70,11 @@ impl Player {
                 Cdr(self.cdr),
                 Luck(self.luck),
                 Pitch(0.0),
-                actions!(PlayerComponent[(Action::<Walk>::new(), client_replicate.clone()), (Action::<Look>::new(), client_replicate.clone())]),
-                actions!(CanJump[(Action::<Jump>::new(), client_replicate.clone())]),
+                actions!(PlayerComponent[
+                    (Action::<Walk>::new(), client_replicate.clone()),
+                    (Action::<Look>::new(), client_replicate.clone()),
+                    (Action::<Jump>::new(), client_replicate.clone())
+                ]),
             ),
             physics_components(),
             self.init_pos,
@@ -88,11 +84,6 @@ impl Player {
             },
             Replicate::to_clients(NetworkTarget::All),
             PredictionTarget::to_clients(NetworkTarget::Single(id)),
-            children![(
-                Collider::cylinder(PLAYER_RADIUS, FOOT_HEIGHT),
-                Sensor,
-                Position::from_xyz(0.0, (-PLAYER_HEIGHT - FOOT_HEIGHT) / 2.0, 0.0),
-            )],
         ))
     }
 }

@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Player(pub PeerId);
 
-#[derive(Component, Serialize, Deserialize, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CanJump;
+#[derive(Component)]
+pub struct Grounded;
 
 #[derive(
     Component, Serialize, Deserialize, Reflect, Deref, DerefMut, Clone, Copy, Debug, PartialEq,

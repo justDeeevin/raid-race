@@ -18,7 +18,7 @@ fn main() {
                 ..Default::default()
             }),
             plugin::server,
-            plugin::player,
+            raid_race_lib::player::plugin,
             plugin::status,
             plugin::console,
         ))

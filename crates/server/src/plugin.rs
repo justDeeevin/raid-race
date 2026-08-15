@@ -1,10 +1,10 @@
 use crate::system::{
-    console, player,
+    console,
     server::{self, ClientIds},
     status,
 };
 use bevy::{
-    app::{App, FixedUpdate, Startup, Update},
+    app::{App, Startup, Update},
     platform::cell::SyncCell,
 };
 use lightyear::prelude::server::ServerPlugins;
@@ -25,14 +25,6 @@ pub fn server(app: &mut App) {
     .add_observer(server::join)
     .add_observer(server::leave)
     .init_resource::<ClientIds>();
-}
-
-pub fn player(app: &mut App) {
-    app.add_plugins(raid_race_lib::player::plugin)
-        .add_systems(FixedUpdate, player::grounded)
-        .add_observer(player::landed)
-        .add_observer(player::jump_released)
-        .add_observer(player::leave_ground);
 }
 
 pub fn status(app: &mut App) {
