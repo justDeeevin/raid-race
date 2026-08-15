@@ -140,17 +140,11 @@ macro_rules! add_bindings_on_owner_spawn {
 pub(crate) use add_bindings_on_owner_spawn;
 
 pub fn spawn(
-    event: On<Add, (Player, Controlled)>,
-    players: Query<(), (With<Player>, With<Controlled>)>,
+    event: On<Add, Player>,
+    controlled: Query<(), With<Controlled>>,
     mut commands: Commands,
     camera: Query<Entity, With<Camera3d>>,
 ) {
-    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
-
-    if players.get(event.entity).is_err() {
-        return;
-    }
-
     commands
         .entity(event.entity)
         .apply_scene(bsn!(
@@ -169,12 +163,16 @@ pub fn spawn(
         ))
         .insert(physics_components());
 
-    commands
-        .entity(camera.single().expect("multiple cameras"))
-        .insert(OrbitCamera {
-            target: event.entity,
-            offset: CAMERA_OFFSET,
-        });
+    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
+
+    if controlled.get(event.entity).is_ok() {
+        commands
+            .entity(camera.single().expect("multiple cameras"))
+            .insert(OrbitCamera {
+                target: event.entity,
+                offset: CAMERA_OFFSET,
+            });
+    }
 }
 
 pub fn orbit(
