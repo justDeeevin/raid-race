@@ -18,6 +18,3 @@ pub struct CanJump;
     Component, Serialize, Deserialize, Reflect, Deref, DerefMut, Clone, Copy, Debug, PartialEq,
 )]
 pub struct Pitch(pub f64);
-
-#[derive(Component, Serialize, Deserialize, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Looking;

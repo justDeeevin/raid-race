@@ -36,12 +36,14 @@ use bevy_console::{
 };
 use lightyear::prelude::{
     Controlled,
-    input::bei::{Action, ActionOf, Binding, Bindings, Cardinal, InputAction, bindings},
+    input::bei::{
+        Action, ActionOf, Binding, Bindings, Cardinal, ContextActivity, InputAction, bindings,
+    },
 };
 use raid_race_lib::{
     component::alive::{
         Id,
-        player::{Looking, Pitch, Player},
+        player::{Pitch, Player},
     },
     input::{Jump, Look, Walk},
     player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
@@ -113,13 +115,13 @@ pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Compone
 /// [^1]: That is, their `ActionOf` will target those entities.
 macro_rules! add_bindings_on_owner_spawn {
     ($owner:ty {$($owners:ident: $context:ty[$($actions:ident: $action:ty),* $(,)?]),* $(,)?}) => {{
-        use ::lightyear::{input::bei::{self, prelude::Actions}, prelude::Controlled};
+        use ::lightyear::prelude::{input::bei::{self, Actions}, Controlled};
         use ::bevy::ecs::{self, system::{self, Query}, query::{self, With}};
 
         |
             event: ecs::observer::On<ecs::lifecycle::Add, ($owner, Controlled, $(Actions<$context>),*)>,
             $($owners: Query<&Actions<$context>, (With<$owner>, With<Controlled>)>,
-                $($actions: Query<(), (With<bei::prelude::Action<$action>>, query::Without<bei::prelude::Bindings>)>),*
+                $($actions: Query<(), (With<bei::Action<$action>>, query::Without<bei::Bindings>)>),*
             ),*,
             mut commands: system::Commands,
         | {$(
@@ -158,6 +160,7 @@ pub fn spawn(
                 PLAYER_CAPSULE_LENGTH as f32,
             )))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
+            ContextActivity::<Player>::INACTIVE
             Children [
                 Mesh3d(asset_value(Cuboid::new(0.1, 0.1, 0.5)))
                 MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
@@ -198,7 +201,7 @@ pub fn orbit(
 pub fn grabber(
     mut button: MessageReader<MouseButtonInput>,
     mut key: MessageReader<KeyboardInput>,
-    player: Single<(Entity, Option<&Looking>), (With<Player>, With<Controlled>)>,
+    player: Single<(Entity, &ContextActivity<Player>), (With<Player>, With<Controlled>)>,
     mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
     mut commands: Commands,
 ) {
@@ -209,12 +212,15 @@ pub fn grabber(
     let esc = key.read().any(|k| k.key_code == KeyCode::Escape);
 
     if click && esc {
-    } else if click && looking.is_none() {
-        commands.entity(entity).insert(Looking);
+        return;
+    }
+
+    if click && !**looking {
+        commands.entity(entity).insert(looking.toggled());
         options.visible = false;
         options.grab_mode = CursorGrabMode::Locked;
-    } else if esc && looking.is_some() {
-        commands.entity(entity).remove::<Looking>();
+    } else if esc && **looking {
+        commands.entity(entity).insert(looking.toggled());
         options.visible = true;
         options.grab_mode = CursorGrabMode::None;
     }

@@ -17,8 +17,11 @@ use component::alive::{player::*, status::*, *};
 use input::{Jump, Look, Walk};
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
-    input::bei::prelude::InputPlugin,
-    prelude::{AppComponentExt, input::InputRegistryExt},
+    prediction::registry::PredictionBuilderExt,
+    prelude::{
+        AppComponentExt,
+        input::{InputRegistryExt, bei::InputPlugin},
+    },
 };
 use std::{
     net::{IpAddr, Ipv4Addr},
@@ -39,12 +42,13 @@ pub fn plugin(app: &mut App) {
 
     replicate!(
         Player, Id, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
-        DefenseUp, DpsUp, DpsDown, CanJump, Looking,
+        DefenseUp, DpsUp, DpsDown, CanJump,
     );
+
+    app.component::<Pitch>().predict();
 
     app.add_plugins(InputPlugin::<Player>::default())
         .add_plugins(InputPlugin::<CanJump>::default())
-        .add_plugins(InputPlugin::<Looking>::default())
         .register_input_action::<Walk>()
         .register_input_action::<Jump>()
         .register_input_action::<Look>();

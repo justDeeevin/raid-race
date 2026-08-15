@@ -25,7 +25,7 @@ use bevy_inspector_egui::{
 use lightyear::prelude::client::ClientPlugins;
 use raid_race_lib::{
     TICK_PERIOD,
-    component::alive::player::{CanJump, Looking, Player},
+    component::alive::player::{CanJump, Player},
     input::{Jump, Look, Walk},
 };
 
@@ -64,11 +64,10 @@ pub fn player(app: &mut App) {
         )
         .add_observer(player::spawn)
         .add_observer(player::add_bindings_on_action_spawn::<Walk, Player, Player>)
-        .add_observer(player::add_bindings_on_action_spawn::<Look, Looking, Player>)
+        .add_observer(player::add_bindings_on_action_spawn::<Look, Player, Player>)
         .add_observer(player::add_bindings_on_action_spawn::<Jump, CanJump, Player>)
         .add_observer(add_bindings_on_owner_spawn!(Player {
-            players: Player[walks: Walk],
-            lookings: Looking[looks: Look],
+            players: Player[walks: Walk, looks: Look],
             canjumps: CanJump[jumps: Jump],
         }))
         .add_console_command::<WhoAmI, _>(player::whoami);
