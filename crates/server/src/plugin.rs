@@ -47,5 +47,7 @@ pub fn console(app: &mut App) {
 
     console::handle(SyncCell::new(rx), app);
 
-    app.add_observer(console::poison);
+    app.add_observer(console::poison)
+        .add_observer(console::slot)
+        .add_observer(console::character);
 }

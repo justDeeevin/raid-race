@@ -4,23 +4,113 @@ use bevy::{
         entity::Entity,
         event::Event,
         observer::On,
+        query::With,
         system::{Commands, Query},
     },
     platform::cell::SyncCell,
 };
 use clap::{Args, Parser, error::ErrorKind};
-use raid_race_lib::component::alive::{Cdr, Id, status::Poison};
+use raid_race_lib::{
+    component::alive::{Cdr, Id, player::Player, status::Poison},
+    player::character::{
+        Abilities,
+        warrior::{self, Warrior},
+    },
+};
 use std::{
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
-use tracing::error;
+use tracing::{error, instrument};
 
 #[derive(Parser)]
 #[command(help_template = "{subcommands}")]
 pub enum Command {
     /// Apply poison to something
     Poison(PoisonCommand),
+    /// Choose a character for a player
+    Character(CharacterCommand),
+    /// Slot an ability
+    Slot(SlotCommand),
+}
+
+#[derive(Event, Args)]
+pub struct CharacterCommand {
+    #[arg()]
+    /// The id of the entity to choose
+    pub target: u64,
+    #[arg()]
+    /// The name of the character to choose
+    pub character: String,
+}
+
+#[instrument(skip_all)]
+pub fn character(
+    event: On<CharacterCommand>,
+    players: Query<(&Id, Entity), With<Player>>,
+    mut commands: Commands,
+) {
+    let Some(player) = players.iter().find_map(|(id, entity)| {
+        if **id == event.target {
+            Some(entity)
+        } else {
+            None
+        }
+    }) else {
+        error!("no player found with given id");
+        return;
+    };
+
+    match event.character.as_str() {
+        "warrior" => {
+            commands
+                .entity(player)
+                .insert((Abilities::<warrior::AbilityId>::default(), Warrior::new(10)));
+        }
+        _ => error!("unknown character"),
+    }
+}
+
+#[derive(Event, Args)]
+pub struct SlotCommand {
+    #[arg()]
+    /// The id of the entity to slot
+    pub target: u64,
+    #[arg()]
+    /// The name of the ability to slot
+    pub ability: String,
+    #[arg()]
+    /// The slot to fill
+    pub slot: u8,
+}
+
+#[instrument(skip_all)]
+pub fn slot(
+    event: On<SlotCommand>,
+    mut warriors: Query<(&Id, &mut Abilities<warrior::AbilityId>)>,
+) {
+    if let Some(mut abilities) = warriors.iter_mut().find_map(|(id, abilities)| {
+        if **id == event.target {
+            Some(abilities)
+        } else {
+            None
+        }
+    }) {
+        let id = match event.ability.as_str() {
+            "strike" => warrior::AbilityId::Strike,
+            _ => {
+                error!("unknown ability for warrior");
+                return;
+            }
+        };
+        if let Some(ability) = abilities.get_mut(event.slot as usize - 1) {
+            *ability = id;
+        } else {
+            error!("invalid slot");
+        }
+    } else {
+        error!("no character found with given id")
+    }
 }
 
 #[derive(Event, Args)]
@@ -36,6 +126,7 @@ pub struct PoisonCommand {
     pub duration: Duration,
 }
 
+#[instrument(skip_all)]
 pub fn poison(
     cmd: On<PoisonCommand>,
     mut commands: Commands,
@@ -48,7 +139,7 @@ pub fn poison(
             None
         }
     }) else {
-        error!("poison target not found");
+        error!("target not found");
         return;
     };
 
@@ -61,7 +152,7 @@ pub fn poison(
             None
         }
     }) else {
-        error!("poison source not found");
+        error!("source not found");
         return;
     };
 
@@ -92,6 +183,8 @@ pub fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
     app.add_systems(Update, move |mut commands: Commands| {
         match rx.get().try_recv() {
             Ok(Command::Poison(cmd)) => commands.trigger(cmd),
+            Ok(Command::Slot(cmd)) => commands.trigger(cmd),
+            Ok(Command::Character(cmd)) => commands.trigger(cmd),
             Err(_) => {}
         }
     });

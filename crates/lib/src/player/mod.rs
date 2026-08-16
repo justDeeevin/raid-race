@@ -1,9 +1,13 @@
+pub mod character;
+
 use crate::{
     component::alive::{
         Agility,
-        player::{Grounded, Pitch, Player},
+        player::{AttackTimer, Grounded, Pitch, Player},
     },
-    input::{Jump, Look, Walk},
+    event::Attacked,
+    input::{Attack, Jump, Look, Walk},
+    player::character::ability_cooldown,
 };
 use avian3d::{
     collision::collider::Collider,
@@ -128,11 +132,35 @@ fn grounded(
     }
 }
 
+pub fn attack(
+    event: On<Start<Attack>>,
+    mut attack_timer: Query<&mut AttackTimer>,
+    mut commands: Commands,
+) {
+    // TODO: hitscan
+    if let Ok(mut attack_timer) = attack_timer.get_mut(event.context)
+        && attack_timer.is_finished()
+    {
+        attack_timer.reset();
+        commands.trigger(Attacked {
+            source: event.context,
+        });
+    }
+}
+
+fn attack_cooldown(attack_timer: Query<&mut AttackTimer>, time: Res<Time>) {
+    for mut timer in attack_timer {
+        timer.tick(time.delta());
+    }
+}
+
 pub fn plugin(app: &mut App) {
-    app.add_systems(FixedUpdate, grounded)
+    app.add_systems(FixedUpdate, (grounded, attack_cooldown, ability_cooldown))
         .add_observer(walk)
         .add_observer(jump)
-        .add_observer(look);
+        .add_observer(look)
+        .add_observer(attack)
+        .add_plugins(character::warrior::plugin);
 }
 
 pub fn physics_components() -> impl Bundle {

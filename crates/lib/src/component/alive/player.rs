@@ -2,19 +2,19 @@ use bevy::{
     ecs::component::Component,
     prelude::{Deref, DerefMut},
     reflect::Reflect,
+    time::Timer,
 };
 use lightyear::core::id::PeerId;
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Component, Serialize, Deserialize, Reflect, Clone, Debug, PartialEq, Eq, Deref, DerefMut,
-)]
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Deref)]
 pub struct Player(pub PeerId);
 
 #[derive(Component)]
 pub struct Grounded;
 
-#[derive(
-    Component, Serialize, Deserialize, Reflect, Deref, DerefMut, Clone, Copy, Debug, PartialEq,
-)]
+#[derive(Component, Serialize, Deserialize, Deref, DerefMut, Clone, Copy, Debug, PartialEq)]
 pub struct Pitch(pub f64);
+
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
+pub struct AttackTimer(pub Timer);

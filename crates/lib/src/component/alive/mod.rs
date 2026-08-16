@@ -1,5 +1,4 @@
 pub mod player;
-// TODO: replicate status effects
 pub mod status;
 
 use bevy::{
@@ -8,7 +7,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+#[derive(Component, Serialize, Deserialize, Deref)]
 /// Unique identifier for living entities
 pub struct Id(pub u64);
 

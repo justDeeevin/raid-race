@@ -1,4 +1,5 @@
 pub mod component;
+pub mod event;
 pub mod input;
 pub mod player;
 pub mod scene;
@@ -23,6 +24,7 @@ use lightyear::{
         input::{InputRegistryExt, bei::InputPlugin},
     },
 };
+use player::character::Cooldowns;
 use std::{
     net::{IpAddr, Ipv4Addr},
     time::Duration,
@@ -41,8 +43,23 @@ pub fn plugin(app: &mut App) {
     }
 
     replicate!(
-        Player, Id, Health, Defense, Mana, Dps, Agility, Cdr, Luck, Pitch, Poison, DefenseUp,
-        DefenseUp, DpsUp, DpsDown,
+        Player,
+        Id,
+        AttackTimer,
+        Cooldowns,
+        Health,
+        Defense,
+        Mana,
+        Dps,
+        Agility,
+        Cdr,
+        Luck,
+        Pitch,
+        Poison,
+        DefenseUp,
+        DefenseUp,
+        DpsUp,
+        DpsDown,
     );
 
     app.component::<Pitch>().predict();
@@ -50,7 +67,15 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(InputPlugin::<Player>::default())
         .register_input_action::<Walk>()
         .register_input_action::<Jump>()
-        .register_input_action::<Look>();
+        .register_input_action::<Look>()
+        .register_input_action::<Attack>()
+        .register_input_action::<Ability<1>>()
+        .register_input_action::<Ability<2>>()
+        .register_input_action::<Ability<3>>()
+        .register_input_action::<Ability<4>>()
+        .register_input_action::<Ability<5>>();
+
+    app.add_plugins(player::plugin);
 
     app.add_plugins((
         LightyearAvianPlugin::default(),

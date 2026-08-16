@@ -12,3 +12,21 @@ pub struct Jump;
 #[derive(InputAction)]
 #[action_output(Vec2)]
 pub struct Look;
+
+pub struct Ability<const N: u8>;
+
+macro_rules! impl_ability {
+    ($($n:literal),* $(,)?) => {
+        $(
+            impl InputAction for Ability<$n> {
+                type Output = bool;
+            }
+        )*
+    }
+}
+
+impl_ability!(1, 2, 3, 4, 5);
+
+#[derive(InputAction)]
+#[action_output(bool)]
+pub struct Attack;

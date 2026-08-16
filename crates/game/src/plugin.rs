@@ -26,7 +26,7 @@ use lightyear::prelude::client::ClientPlugins;
 use raid_race_lib::{
     TICK_PERIOD,
     component::alive::player::Player,
-    input::{Jump, Look, Walk},
+    input::{Ability, Jump, Look, Walk},
 };
 
 pub fn hud(app: &mut App) {
@@ -53,23 +53,36 @@ pub fn client(app: &mut App) {
 }
 
 pub fn player(app: &mut App) {
-    app.add_plugins(raid_race_lib::player::plugin)
-        .add_systems(
-            Update,
-            (
-                player::orbit,
-                player::grabber
-                    .run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
-            ),
-        )
-        .add_observer(player::spawn)
-        .add_observer(player::add_bindings_on_action_spawn::<Walk, Player, Player>)
-        .add_observer(player::add_bindings_on_action_spawn::<Look, Player, Player>)
-        .add_observer(player::add_bindings_on_action_spawn::<Jump, Player, Player>)
-        .add_observer(add_bindings_on_owner_spawn!(Player {
-            players: Player[walks: Walk, looks: Look, jumps: Jump],
-        }))
-        .add_console_command::<WhoAmI, _>(player::whoami);
+    app.add_systems(
+        Update,
+        (
+            player::orbit,
+            player::grabber
+                .run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
+        ),
+    )
+    .add_observer(player::spawn)
+    .add_observer(player::add_bindings_on_action_spawn::<Walk, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Look, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Jump, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Ability<1>, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Ability<2>, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Ability<3>, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Ability<4>, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Ability<5>, Player, Player>)
+    .add_observer(add_bindings_on_owner_spawn!(Player {
+        players: Player[
+            walks: Walk,
+            looks: Look,
+            jumps: Jump,
+            ones: Ability<1>,
+            twos: Ability<2>,
+            threes: Ability<3>,
+            fours: Ability<4>,
+            fives: Ability<5>
+        ],
+    }))
+    .add_console_command::<WhoAmI, _>(player::whoami);
 }
 
 #[allow(unused)]

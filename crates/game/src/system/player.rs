@@ -45,7 +45,7 @@ use raid_race_lib::{
         Id,
         player::{Pitch, Player},
     },
-    input::{Jump, Look, Walk},
+    input::{Ability, Jump, Look, Walk},
     player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
 };
 
@@ -92,6 +92,36 @@ impl Binds for Look {
     }
 }
 
+impl Binds for Ability<1> {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Digit1]
+    }
+}
+
+impl Binds for Ability<2> {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Digit2]
+    }
+}
+
+impl Binds for Ability<3> {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Digit3]
+    }
+}
+
+impl Binds for Ability<4> {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Digit4]
+    }
+}
+
+impl Binds for Ability<5> {
+    fn bindings() -> impl Bundle {
+        bindings![KeyCode::Digit5]
+    }
+}
+
 /// Adds bindings to an action entity when it spawns
 pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     event: On<Insert, (Action<A>, ActionOf<Context>)>,
@@ -128,8 +158,8 @@ macro_rules! add_bindings_on_owner_spawn {
             if let Ok(actions) = $owners.get(event.entity)  {
                 for action in actions {$(
                     if $actions.get(action).is_ok() {
-                      commands.entity(action).insert(<$action as $crate::system::player::Binds>::bindings());
-                      continue;
+                        commands.entity(action).insert(<$action as $crate::system::player::Binds>::bindings());
+                        continue;
                     }
                 )*}
             }

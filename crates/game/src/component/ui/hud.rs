@@ -2,10 +2,9 @@ use bevy::{
     color::Color,
     ecs::{component::Component, entity::Entity, template::FromTemplate},
     prelude::{Deref, DerefMut},
-    reflect::Reflect,
 };
 
-#[derive(Component, FromTemplate, Reflect, Deref, DerefMut)]
+#[derive(Component, FromTemplate, Deref, DerefMut)]
 pub struct HealthBar(pub Entity);
 
 impl HealthBar {
