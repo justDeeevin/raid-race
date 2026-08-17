@@ -8,12 +8,13 @@ use bevy::{
         system::{Commands, Query},
     },
     platform::cell::SyncCell,
+    time::{Timer, TimerMode},
 };
 use clap::{Args, Parser, error::ErrorKind};
 use raid_race_lib::{
     component::alive::{Cdr, Id, player::Player, status::Poison},
     player::character::{
-        Abilities,
+        Abilities, Cooldowns,
         warrior::{self, Warrior},
     },
 };
@@ -63,9 +64,15 @@ pub fn character(
 
     match event.character.as_str() {
         "warrior" => {
-            commands
-                .entity(player)
-                .insert((Abilities::<warrior::AbilityId>::default(), Warrior::new(10)));
+            commands.entity(player).insert((
+                Abilities::<warrior::AbilityId>::default(),
+                Warrior::new(10),
+                Cooldowns(std::array::from_fn(|_| {
+                    let mut out = Timer::new(Duration::from_secs(5), TimerMode::Once);
+                    out.almost_finish();
+                    out
+                })),
+            ));
         }
         _ => error!("unknown character"),
     }

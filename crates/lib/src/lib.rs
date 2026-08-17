@@ -46,7 +46,6 @@ pub fn plugin(app: &mut App) {
         Player,
         Id,
         AttackTimer,
-        Cooldowns,
         Health,
         Defense,
         Mana,
@@ -61,6 +60,8 @@ pub fn plugin(app: &mut App) {
         DpsUp,
         DpsDown,
     );
+
+    app.component::<Cooldowns>().replicate_once();
 
     app.component::<Pitch>().predict();
 

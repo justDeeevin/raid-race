@@ -30,11 +30,22 @@ use raid_race_lib::{
 };
 
 pub fn hud(app: &mut App) {
-    app.add_systems(Update, (hud::health_bar, hud::mana_bar))
-        .add_observer(hud::spawn)
-        .add_observer(hud::despawn)
-        .add_observer(hud::add_poison)
-        .add_observer(hud::remove_poison);
+    app.add_systems(
+        Update,
+        (
+            hud::health_bar,
+            hud::mana_bar,
+            hud::ability_cooldown::<1>,
+            hud::ability_cooldown::<2>,
+            hud::ability_cooldown::<3>,
+            hud::ability_cooldown::<4>,
+            hud::ability_cooldown::<5>,
+        ),
+    )
+    .add_observer(hud::spawn)
+    .add_observer(hud::despawn)
+    .add_observer(hud::add_poison)
+    .add_observer(hud::remove_poison);
 }
 
 pub fn client(app: &mut App) {

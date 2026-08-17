@@ -21,7 +21,7 @@ use raid_race_lib::{
         player::{AttackTimer, Pitch, Player as PlayerComponent},
     },
     input::{Ability, Attack, Jump, Look, Walk},
-    player::{PLAYER_HEIGHT, character::Cooldowns, physics_components},
+    player::{PLAYER_HEIGHT, physics_components},
 };
 use typed_builder::TypedBuilder;
 
@@ -85,11 +85,6 @@ impl Player {
                     (Action::<Attack>::new(), client_replicate.clone()),
                 ]),
                 AttackTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
-                Cooldowns(std::array::from_fn(|_| {
-                    let mut out = Timer::from_seconds(5.0, TimerMode::Once);
-                    out.almost_finish();
-                    out
-                })),
             ),
             physics_components(),
             self.init_pos,

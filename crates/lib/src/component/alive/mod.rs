@@ -8,6 +8,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Serialize, Deserialize, Deref)]
+#[component(immutable)]
 /// Unique identifier for living entities
 pub struct Id(pub u64);
 
