@@ -7,3 +7,6 @@ self-sign:
 
 digest:
     openssl dgst -sha256 -binary cert.der | encode hex | save -f digest.txt
+
+new-key:
+    random binary 32 | encode hex

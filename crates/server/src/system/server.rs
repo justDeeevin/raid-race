@@ -40,12 +40,32 @@ pub struct ClientIds(Arc<RwLock<HashSet<u64>>>);
 
 // VERSION 0
 const PROTOCOL_ID: u64 = 0;
-// Randomly generated
-// TODO: env-based
-const PRIVATE_KEY: Key = [
-    184, 63, 110, 250, 164, 56, 107, 162, 244, 38, 79, 238, 202, 80, 29, 146, 241, 72, 217, 45,
-    144, 145, 102, 85, 244, 9, 166, 80, 117, 193, 11, 0,
-];
+const PRIVATE_KEY: Key = {
+    const fn hex(char: u8) -> u8 {
+        match char {
+            b'0'..=b'9' => char - b'0',
+            b'a'..=b'f' => char - b'a' + 10,
+            b'A'..=b'F' => char - b'A' + 10,
+            _ => panic!("invalid hex character"),
+        }
+    }
+
+    let bytes = env!("RAID_RACE_PRIVATE_KEY").as_bytes();
+    assert!(
+        bytes.len() == 64,
+        "private key must be 32 bytes (64 hex characters)"
+    );
+    let mut out = [0; 32];
+    let mut i = 0;
+
+    while i < 32 {
+        let j = i * 2;
+        out[i] = (hex(bytes[j]) << 4) + hex(bytes[j + 1]);
+        i += 1;
+    }
+
+    out
+};
 
 pub fn serve(mut commands: Commands, ids: Res<ClientIds>) {
     let entity = commands
