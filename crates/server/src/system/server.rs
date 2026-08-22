@@ -4,7 +4,7 @@ use async_lock::RwLock;
 use async_net::TcpListener;
 use avian3d::parry::utils::hashset::HashSet;
 use bevy::{
-    asset::AsyncWriteExt,
+    asset::{AsyncReadExt, AsyncWriteExt},
     ecs::{
         lifecycle::Add,
         observer::On,
@@ -29,7 +29,7 @@ use lightyear::{
 };
 use raid_race_lib::{AUTH_PORT, GAME_PORT, SERVER_ADDR};
 use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
 };
 use tracing::info;
@@ -101,11 +101,12 @@ async fn auth_server(ids: Arc<RwLock<HashSet<u64>>>) {
     info!("started auth server");
 
     loop {
-        let (mut stream, _) = listener
+        let (mut stream, client_addr) = listener
             .accept()
             .await
             .expect("failed to accept auth connection");
 
+        // TODO: consideration for remote servers
         let id = loop {
             let out = rand::random();
             if !ids.read().await.contains(&out) {
@@ -113,13 +114,37 @@ async fn auth_server(ids: Arc<RwLock<HashSet<u64>>>) {
             }
         };
 
+        let mut version = [0];
+        stream
+            .read_exact(&mut version)
+            .await
+            .expect("failed to read ip version");
+
+        let server_addr = match version[0] {
+            4 => {
+                let mut ip = [0; 4];
+                stream
+                    .read_exact(&mut ip)
+                    .await
+                    .expect("failed to read ipv4 address");
+                IpAddr::V4(Ipv4Addr::from_octets(ip))
+            }
+            6 => {
+                let mut ip = [0; 16];
+                stream
+                    .read_exact(&mut ip)
+                    .await
+                    .expect("failed to read ipv6 address");
+                IpAddr::V6(Ipv6Addr::from_octets(ip))
+            }
+            v => {
+                tracing::error!(%client_addr, v, "invalid ip version provided");
+                continue;
+            }
+        };
+
         let token = ConnectToken::build(
-            // TODO:
-            [
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), GAME_PORT),
-                SocketAddr::new(SERVER_ADDR, GAME_PORT),
-            ]
-            .as_slice(),
+            SocketAddr::new(server_addr, GAME_PORT),
             PROTOCOL_ID,
             id,
             PRIVATE_KEY,
@@ -134,7 +159,7 @@ async fn auth_server(ids: Arc<RwLock<HashSet<u64>>>) {
             .await
             .expect("failed to send token to client");
 
-        info!(id, "sent token to client");
+        info!(%client_addr, %server_addr, id, "sent token to client");
     }
 }
 
