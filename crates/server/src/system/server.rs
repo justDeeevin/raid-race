@@ -4,7 +4,6 @@ use async_lock::RwLock;
 use async_net::TcpListener;
 use avian3d::parry::utils::hashset::HashSet;
 use bevy::{
-    asset::AsyncWriteExt,
     ecs::{
         lifecycle::Add,
         observer::On,
@@ -15,6 +14,7 @@ use bevy::{
     prelude::{Deref, DerefMut},
     tasks::IoTaskPool,
 };
+use http_types::{Response, StatusCode};
 use lightyear::{
     connection::{
         client::{Connected, Disconnected},
@@ -23,49 +23,16 @@ use lightyear::{
     },
     core::id::{PeerId, RemoteId},
     link::server::LinkOf,
-    netcode::{ConnectToken, Key, NetcodeServer, server_plugin::NetcodeConfig},
+    netcode::{NetcodeServer, server_plugin::NetcodeConfig},
     prelude::{Identity, LocalAddr, ReplicationSender},
     webtransport::server::WebTransportServerIo,
 };
-use raid_race_lib::{AUTH_PORT, GAME_PORT, SERVER_ADDR};
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
-use tracing::info;
+use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, SERVER_ADDR, TOTP};
+use std::{net::SocketAddr, sync::Arc};
 use wtransport::tls::{Certificate, CertificateChain, PrivateKey};
 
 #[derive(Resource, Deref, DerefMut, Default)]
 pub struct ClientIds(Arc<RwLock<HashSet<u64>>>);
-
-// VERSION 0
-const PROTOCOL_ID: u64 = 0;
-const PRIVATE_KEY: Key = {
-    const fn hex(char: u8) -> u8 {
-        match char {
-            b'0'..=b'9' => char - b'0',
-            b'a'..=b'f' => char - b'a' + 10,
-            b'A'..=b'F' => char - b'A' + 10,
-            _ => panic!("invalid hex character"),
-        }
-    }
-
-    let bytes = env!("RAID_RACE_PRIVATE_KEY").as_bytes();
-    assert!(
-        bytes.len() == 64,
-        "private key must be 32 bytes (64 hex characters)"
-    );
-    let mut out = [0; 32];
-    let mut i = 0;
-
-    while i < 32 {
-        let j = i * 2;
-        out[i] = (hex(bytes[j]) << 4) + hex(bytes[j + 1]);
-        i += 1;
-    }
-
-    out
-};
 
 pub fn serve(mut commands: Commands, ids: Res<ClientIds>) {
     let entity = commands
@@ -90,51 +57,46 @@ pub fn serve(mut commands: Commands, ids: Res<ClientIds>) {
 
     commands.trigger(Start { entity });
 
-    IoTaskPool::get().spawn(auth_server(ids.clone())).detach();
+    IoTaskPool::get().spawn(id_server(ids.clone())).detach();
 }
 
-async fn auth_server(ids: Arc<RwLock<HashSet<u64>>>) {
-    let listener = TcpListener::bind(SocketAddr::new(SERVER_ADDR, AUTH_PORT))
-        .await
-        .expect("failed to start auth server");
+async fn id_server(ids: Arc<RwLock<HashSet<u64>>>) {
+    #[derive(serde::Deserialize)]
+    struct Query {
+        totp: String,
+    }
 
-    info!("started auth server");
+    let socket = TcpListener::bind(SocketAddr::new(SERVER_ADDR, ID_PORT))
+        .await
+        .expect("failed to bind to socket");
 
     loop {
-        let (mut stream, _) = listener
-            .accept()
-            .await
-            .expect("failed to accept auth connection");
-
-        let id = loop {
-            let out = rand::random();
-            if !ids.read().await.contains(&out) {
-                break out;
-            }
-        };
-
-        let token = ConnectToken::build(
-            // TODO:
-            [
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), GAME_PORT),
-                SocketAddr::new(SERVER_ADDR, GAME_PORT),
-            ]
-            .as_slice(),
-            PROTOCOL_ID,
-            id,
-            PRIVATE_KEY,
-        )
-        .generate()
-        .expect("failed to generate token");
-
-        let serialized_token = token.try_into_bytes().expect("failed to serialize token");
-
-        stream
-            .write_all(&serialized_token)
-            .await
-            .expect("failed to send token to client");
-
-        info!(id, "sent token to client");
+        let (stream, client_addr) = socket.accept().await.expect("failed to accept connection");
+        let span = tracing::info_span!("id connection", %client_addr);
+        let _guard = span.enter();
+        async_h1::accept(stream, async |req| {
+            Ok(
+                if let Ok(Query { totp }) = req.query()
+                    && TOTP.check_current(&totp).is_some()
+                {
+                    let id: u64 = loop {
+                        let out = rand::random();
+                        if !ids.read().await.contains(&out) {
+                            break out;
+                        }
+                    };
+                    let mut res = Response::new(StatusCode::Ok);
+                    res.set_body(id.to_be_bytes().as_slice());
+                    tracing::info!(id, "sent new id");
+                    res
+                } else {
+                    tracing::warn!("invalid totp");
+                    Response::new(StatusCode::Unauthorized)
+                },
+            )
+        })
+        .await
+        .expect("failed to send id");
     }
 }
 

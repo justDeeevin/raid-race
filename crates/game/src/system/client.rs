@@ -1,11 +1,10 @@
 use async_net::TcpStream;
 use bevy::{
-    asset::AsyncReadExt,
     ecs::{
         entity::Entity,
         query::With,
         resource::Resource,
-        system::{Commands, Query, ResMut},
+        system::{Commands, Query, Res, ResMut},
     },
     prelude::{Deref, DerefMut},
     tasks::{IoTaskPool, Task, block_on, poll_once},
@@ -14,12 +13,11 @@ use bevy_console::{
     ConsoleCommand,
     clap::{self, Parser},
 };
+use futures::TryFutureExt;
+use http_types::Request;
 use lightyear::{
     connection::client::{Client, Connect, Connected, Disconnect},
-    netcode::{
-        CONNECT_TOKEN_BYTES, ConnectToken, NetcodeClient, auth::Authentication,
-        client_plugin::NetcodeConfig,
-    },
+    netcode::{ConnectToken, NetcodeClient, auth::Authentication, client_plugin::NetcodeConfig},
     prelude::{LocalAddr, PeerAddr, PingManager, ReplicationReceiver},
     webtransport::client::WebTransportClientIo,
 };
@@ -44,16 +42,26 @@ pub struct ConnectCommand {
 pub struct DisconnectCommand;
 
 #[derive(Resource, Deref, DerefMut)]
+pub struct AuthServer(IpAddr);
+
+impl Default for AuthServer {
+    fn default() -> Self {
+        Self(IpAddr::V4(Ipv4Addr::LOCALHOST))
+    }
+}
+
+#[derive(Resource, Deref, DerefMut)]
 pub struct TokenTask(Task<ConnectToken>);
 
-pub fn connect(mut commands: Commands, server: SocketAddr) {
+// TODO: steam
+pub fn connect(mut commands: Commands, game_server: SocketAddr, auth_server: IpAddr) {
     const CLIENT_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
     commands.spawn((
         Client,
         ReplicationReceiver,
         LocalAddr(SocketAddr::new(CLIENT_ADDR, 0)),
-        PeerAddr(server),
+        PeerAddr(game_server),
         PingManager::default(),
         WebTransportClientIo {
             certificate_digest: include_str!("../../../server/digest.txt").into(),
@@ -61,25 +69,26 @@ pub fn connect(mut commands: Commands, server: SocketAddr) {
         },
     ));
 
-    let task = IoTaskPool::get().spawn(get_token(server.ip()));
+    let task = IoTaskPool::get().spawn(get_token(game_server.ip(), auth_server));
     commands.insert_resource(TokenTask(task))
 }
 
-// TODO: steam
-async fn get_token(server: IpAddr) -> ConnectToken {
+async fn get_token(game_server: IpAddr, auth_server: IpAddr) -> ConnectToken {
     tracing::info!("fetching auth token");
-    let mut stream = TcpStream::connect(SocketAddr::new(server, AUTH_PORT))
+
+    let stream = TcpStream::connect(SocketAddr::new(auth_server, AUTH_PORT))
         .await
         .expect("failed to connect to auth server");
 
-    let mut buffer = [0_u8; CONNECT_TOKEN_BYTES];
+    let bytes = async_h1::connect(
+        stream,
+        Request::get(format!("http://{auth_server}:{AUTH_PORT}/{game_server}").as_str()),
+    )
+    .and_then(async |mut res| res.body_bytes().await)
+    .await
+    .expect("failed to get auth token");
 
-    stream
-        .read_exact(&mut buffer)
-        .await
-        .expect("failed to read connect token");
-
-    ConnectToken::try_from_bytes(&buffer).expect("failed to parse connect token from server")
+    ConnectToken::try_from_bytes(&bytes).expect("failed to parse connect token")
 }
 
 pub fn wait_for_token(
@@ -102,7 +111,11 @@ pub fn wait_for_token(
     }
 }
 
-pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, commands: Commands) {
+pub fn connect_command(
+    mut cmd: ConsoleCommand<ConnectCommand>,
+    auth_server: Res<AuthServer>,
+    commands: Commands,
+) {
     let Some(Ok(ConnectCommand { address })) = cmd.take() else {
         return;
     };
@@ -118,7 +131,7 @@ pub fn connect_command(mut cmd: ConsoleCommand<ConnectCommand>, commands: Comman
         return;
     };
 
-    connect(commands, addr);
+    connect(commands, addr, **auth_server);
 }
 
 pub fn disconnect_command(

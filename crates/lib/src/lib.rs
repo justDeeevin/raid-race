@@ -18,6 +18,7 @@ use component::alive::{player::*, status::*, *};
 use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
+    netcode::Key,
     prediction::registry::PredictionBuilderExt,
     prelude::{
         AppComponentExt,
@@ -27,13 +28,50 @@ use lightyear::{
 use player::character::Cooldowns;
 use std::{
     net::{IpAddr, Ipv4Addr},
+    sync::LazyLock,
     time::Duration,
 };
+use totp_rs::{Builder, Totp};
 
 pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
 pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 pub const GAME_PORT: u16 = 5000;
 pub const AUTH_PORT: u16 = 4000;
+pub const ID_PORT: u16 = 4001;
+
+// VERSION 0
+pub const PROTOCOL_ID: u64 = 0;
+pub const PRIVATE_KEY: Key = {
+    const fn hex(char: u8) -> u8 {
+        match char {
+            b'0'..=b'9' => char - b'0',
+            b'a'..=b'f' => char - b'a' + 10,
+            b'A'..=b'F' => char - b'A' + 10,
+            _ => panic!("invalid hex character"),
+        }
+    }
+
+    let bytes = env!("RAID_RACE_PRIVATE_KEY").as_bytes();
+    assert!(
+        bytes.len() == 64,
+        "private key must be 32 bytes (64 hex characters)"
+    );
+    let mut out = [0; 32];
+    let mut i = 0;
+
+    while i < 32 {
+        let j = i * 2;
+        out[i] = (hex(bytes[j]) << 4) + hex(bytes[j + 1]);
+        i += 1;
+    }
+
+    out
+};
+
+pub static TOTP: LazyLock<Totp> = LazyLock::new(|| {
+    #[allow(clippy::unwrap_used, reason = "should never fail")]
+    Builder::new().with_secret(PRIVATE_KEY).build().unwrap()
+});
 
 pub fn plugin(app: &mut App) {
     macro_rules! replicate {

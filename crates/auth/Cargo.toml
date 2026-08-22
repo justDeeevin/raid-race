@@ -1,0 +1,22 @@
+[package]
+name = "raid-race-auth"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+raid-race-lib.workspace = true
+reqwest = "0.13.4"
+bytes = "1.12.1"
+lightyear_netcode = "0.29.0"
+hakari = { version = "0.1", path = "../hakari" }
+futures.workspace = true
+axum = { version = "0.8.9", default-features = false, features = [
+	"http1",
+	"tokio",
+	"tracing",
+	"query",
+] }
+tokio = { version = "1.53.1", features = ["net", "macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

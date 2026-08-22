@@ -8,7 +8,7 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-raid-race-lib = { path = "crates/lib" }
+raid-race-lib = { path = "crates/lib", version = "0.1.0" }
 tracing = "0.1.44"
 bevy = { version = "0.19.0", default-features = false, features = [
 	"bevy_asset",
@@ -32,7 +32,11 @@ lightyear = { version = "0.29.0", default-features = false, features = [
 	"netcode",
 	"input_bei",
 ] }
+futures = { version = "0.3.34", default-features = false }
 async-net = "2.0.0"
+async-h1 = "2.3.4"
+http-types = "2.12.0"
+serde = { version = "1.0.229", features = ["derive"] }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"

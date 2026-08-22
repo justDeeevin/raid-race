@@ -14,7 +14,10 @@ lightyear = { workspace = true, features = [
 	"prediction",
 	"interpolation",
 ] }
+futures.workspace = true
 async-net.workspace = true
+async-h1.workspace = true
+http-types.workspace = true
 
 # TODO: use crates.io when these get merged and released
 bevy-inspector-egui = { git = "https://github.com/kisya-games/bevy-inspector-egui", branch = "egui-0.36" }

@@ -16,6 +16,7 @@ publish = false
 ### BEGIN HAKARI SECTION
 [dependencies]
 aeronet_webtransport = { version = "0.21", features = ["client", "server"] }
+anyhow = { version = "1" }
 avian3d = { version = "0.7", default-features = false, features = ["3d", "debug-plugin", "parallel", "parry-f64", "serialize", "xpbd_joints"] }
 bevy = { version = "0.19", default-features = false, features = ["3d", "audio", "debug", "dynamic_linking", "keyboard", "mouse", "serialize", "touch", "ui"] }
 bevy_app = { version = "0.19", features = ["reflect_auto_register"] }
@@ -39,6 +40,9 @@ bytes = { version = "1", features = ["serde"] }
 constant_time_eq = { version = "0.4", default-features = false, features = ["std"] }
 either = { version = "1", features = ["use_std"] }
 foldhash = { version = "0.2", default-features = false, features = ["std"] }
+form_urlencoded = { version = "1" }
+futures-channel = { version = "0.3", features = ["sink"] }
+getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = ["std"] }
 hashbrown = { version = "0.17", default-features = false, features = ["default-hasher", "raw-entry"] }
 icu_locale_core = { version = "2", default-features = false, features = ["alloc", "zerovec"] }
 icu_provider = { version = "2", default-features = false, features = ["alloc", "baked"] }
@@ -51,7 +55,7 @@ lightyear_inputs = { version = "0.29", default-features = false, features = ["cl
 lightyear_inputs_bei = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
 lightyear_interpolation = { version = "0.29", default-features = false, features = ["std"] }
 lightyear_messages = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
-lightyear_netcode = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
+lightyear_netcode = { version = "0.29" }
 lightyear_prediction = { version = "0.29", default-features = false, features = ["server", "std"] }
 lightyear_replication = { version = "0.29", default-features = false, features = ["avian3d", "client", "interpolation", "prediction", "server", "std"] }
 lightyear_sync = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
@@ -59,18 +63,24 @@ lightyear_transport = { version = "0.29", default-features = false, features = [
 lightyear_webtransport = { version = "0.29", default-features = false, features = ["client", "self-signed", "server"] }
 linebender_resource_handle = { version = "0.1", default-features = false, features = ["std"] }
 litemap = { version = "0.8", default-features = false, features = ["alloc"] }
+log = { version = "0.4", default-features = false, features = ["kv_unstable", "std"] }
 nom = { version = "7" }
 num-bigint = { version = "0.4" }
-percent-encoding = { version = "2" }
 petgraph = { version = "0.8", features = ["serde-1"] }
 potential_utf = { version = "0.1", default-features = false, features = ["alloc", "zerovec"] }
+rand_core = { version = "0.6", default-features = false, features = ["std"] }
 read-fonts = { version = "0.41", default-features = false, features = ["experimental_font_api", "std"] }
 ron = { version = "0.12" }
-serde_core = { version = "1", default-features = false, features = ["alloc", "rc", "result", "std"] }
+serde_core = { version = "1", features = ["alloc", "rc"] }
+serde_json = { version = "1", features = ["raw_value"] }
 skrifa = { version = "0.44", default-features = false, features = ["autohint_shaping", "std"] }
 slotmap = { version = "1", default-features = false, features = ["std"] }
 stable_deref_trait = { version = "1", default-features = false, features = ["alloc"] }
+standback = { version = "0.2", default-features = false, features = ["std"] }
 tinystr = { version = "0.8", default-features = false, features = ["alloc", "zerovec"] }
+tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+typenum = { version = "1", default-features = false, features = ["const-generics"] }
+url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 wgpu = { version = "29", default-features = false, features = ["dx12", "fragile-send-sync-non-atomic-wasm", "metal", "naga-ir", "vulkan", "webgl", "wgsl"] }
 wgpu-types = { version = "29", features = ["fragile-send-sync-non-atomic-wasm", "serde", "web"] }
@@ -88,26 +98,52 @@ foldhash = { version = "0.2", default-features = false, features = ["std"] }
 hashbrown = { version = "0.17", default-features = false, features = ["default-hasher", "raw-entry"] }
 indexmap = { version = "2", features = ["serde"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }
-serde_core = { version = "1", default-features = false, features = ["alloc", "rc", "result", "std"] }
-syn-7b89eefb6aaa9bf3 = { package = "syn", version = "3", features = ["full"] }
+serde_core = { version = "1", features = ["alloc", "rc"] }
+standback = { version = "0.2", default-features = false, features = ["std"] }
+syn-7b89eefb6aaa9bf3 = { package = "syn", version = "3", features = ["extra-traits", "full"] }
+syn-dff4ba8e3ae991db = { package = "syn", version = "1", features = ["extra-traits", "full"] }
 syn-f595c2ba2a3f28df = { package = "syn", version = "2", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 
 [target.x86_64-unknown-linux-gnu.dependencies]
+hyper = { version = "1", features = ["client", "http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["client-legacy", "client-proxy", "client-proxy-system", "http1", "http2", "server", "service"] }
+libc = { version = "0.2", features = ["extra_traits"] }
 linux-raw-sys = { version = "0.12", default-features = false, features = ["auxvec", "elf", "errno", "general", "if_ether", "ioctl", "net", "netlink", "no_std", "prctl", "system", "xdp"] }
 nix = { version = "0.31", default-features = false, features = ["event", "ioctl", "signal"] }
+percent-encoding = { version = "2" }
 rustix = { version = "1", features = ["event", "net", "pipe", "process", "shm", "system", "time"] }
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "ring", "std", "tls12"] }
+rustls-webpki = { version = "0.103", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+sync_wrapper = { version = "1", default-features = false, features = ["futures"] }
+tower = { version = "0.5", default-features = false, features = ["make", "retry", "timeout"] }
 tracing = { version = "0.1", features = ["log"] }
 wayland-backend = { version = "0.3", default-features = false, features = ["client_system", "dlopen"] }
 wayland-sys = { version = "0.31", default-features = false, features = ["client", "dlopen"] }
 wgpu-core = { version = "29", features = ["dx12", "fragile-send-sync-non-atomic-wasm", "metal", "portable-atomic", "renderdoc", "vulkan", "webgl", "wgsl"] }
 
+[target.x86_64-unknown-linux-gnu.build-dependencies]
+cc = { version = "1", default-features = false, features = ["parallel"] }
+libc = { version = "0.2", features = ["extra_traits"] }
+
 [target.x86_64-pc-windows-msvc.dependencies]
+getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4", default-features = false, features = ["std", "sys_rng"] }
+hyper = { version = "1", features = ["client", "http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["client-legacy", "client-proxy", "client-proxy-system", "http1", "http2", "server", "service"] }
 image = { version = "0.25", default-features = false, features = ["bmp"] }
+percent-encoding = { version = "2" }
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "ring", "std", "tls12"] }
+rustls-webpki = { version = "0.103", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+sync_wrapper = { version = "1", default-features = false, features = ["futures"] }
+tower = { version = "0.5", default-features = false, features = ["make", "retry", "timeout"] }
 wgpu-core = { version = "29", features = ["dx12", "fragile-send-sync-non-atomic-wasm", "metal", "portable-atomic", "renderdoc", "vulkan", "webgl", "wgsl"] }
-winapi = { version = "0.3", default-features = false, features = ["cfg", "evntrace", "in6addr", "inaddr", "minwinbase", "ntsecapi", "profileapi", "windef", "winioctl"] }
+winapi = { version = "0.3", default-features = false, features = ["cfg", "evntrace", "handleapi", "in6addr", "inaddr", "minwinbase", "minwindef", "ntsecapi", "profileapi", "timezoneapi", "windef", "winioctl", "ws2ipdef", "ws2tcpip"] }
 windows = { version = "0.62", features = ["Devices_Power", "Foundation_Collections", "Gaming_Input_ForceFeedback", "System_Power", "Wdk_System_SystemInformation", "Wdk_System_SystemServices", "Wdk_System_Threading", "Win32_Devices_DeviceAndDriverInstallation", "Win32_Devices_Properties", "Win32_Globalization", "Win32_Graphics_Direct3D12", "Win32_Graphics_Direct3D_Dxc", "Win32_Graphics_Direct3D_Fxc", "Win32_Graphics_DirectComposition", "Win32_Graphics_Dxgi_Common", "Win32_Graphics_Gdi", "Win32_Media_Audio", "Win32_Media_KernelStreaming", "Win32_Media_Multimedia", "Win32_Security_Authorization", "Win32_System_Com_StructuredStorage", "Win32_System_Diagnostics_Debug", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Kernel", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Ole", "Win32_System_Performance", "Win32_System_Power", "Win32_System_ProcessStatus", "Win32_System_Registry", "Win32_System_RemoteDesktop", "Win32_System_SystemInformation", "Win32_System_SystemServices", "Win32_System_Threading", "Win32_System_Variant", "Win32_UI_Accessibility", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell_PropertiesSystem", "Win32_UI_WindowsAndMessaging"] }
 windows-core = { version = "0.62" }
 windows-sys-b21d60becc0929df = { package = "windows-sys", version = "0.52", features = ["Win32_Devices_HumanInterfaceDevice", "Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_Media", "Win32_Networking_WinSock", "Win32_Security", "Win32_System_Com_StructuredStorage", "Win32_System_IO", "Win32_System_LibraryLoader", "Win32_System_Ole", "Win32_System_SystemInformation", "Win32_System_SystemServices", "Win32_System_Threading", "Win32_System_WindowsProgramming", "Win32_UI_Accessibility", "Win32_UI_Controls", "Win32_UI_HiDpi", "Win32_UI_Input_Ime", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Input_Pointer", "Win32_UI_Input_Touch", "Win32_UI_Shell", "Win32_UI_TextServices", "Win32_UI_WindowsAndMessaging"] }
 windows-sys-d4189bed749088b6 = { package = "windows-sys", version = "0.61", features = ["Wdk_Foundation", "Wdk_Storage_FileSystem", "Wdk_System_IO", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_Security_Authentication_Identity", "Win32_Security_Credentials", "Win32_Security_Cryptography", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_Console", "Win32_System_Diagnostics_Debug", "Win32_System_IO", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Pipes", "Win32_System_SystemInformation", "Win32_System_SystemServices", "Win32_System_Threading", "Win32_System_WindowsProgramming", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[target.x86_64-pc-windows-msvc.build-dependencies]
+cc = { version = "1", default-features = false, features = ["parallel"] }
+getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4", default-features = false, features = ["std", "sys_rng"] }
 
 ### END HAKARI SECTION

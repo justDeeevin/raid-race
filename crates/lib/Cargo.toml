@@ -12,9 +12,10 @@ avian3d.workspace = true
 bevy.workspace = true
 hakari = { version = "0.1", path = "../hakari" }
 lightyear.workspace = true
-serde = { version = "1.0.229", features = ["derive"] }
+serde.workspace = true
 bevy_enhanced_input = "0.26.0"
 tracing.workspace = true
+totp-rs = { version = "6.0.0", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true
