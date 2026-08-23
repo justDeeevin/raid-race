@@ -4,7 +4,6 @@ use bevy::{
         entity::Entity,
         event::Event,
         observer::On,
-        query::With,
         system::{Commands, Query},
     },
     platform::cell::SyncCell,
@@ -12,10 +11,13 @@ use bevy::{
 };
 use clap::{Args, Parser, error::ErrorKind};
 use raid_race_lib::{
-    component::alive::{Cdr, Id, player::Player, status::Poison},
-    player::character::{
-        Abilities, Cooldowns,
-        warrior::{self, Warrior},
+    component::alive::{Cdr, Health, Id, status::Poison},
+    player::{
+        character::{
+            Abilities, Cooldowns,
+            warrior::{self, Warrior},
+        },
+        weapon::placeholder_gun::PlaceholderGun,
     },
 };
 use std::{
@@ -27,12 +29,72 @@ use tracing::{error, instrument};
 #[derive(Parser)]
 #[command(help_template = "{subcommands}")]
 pub enum Command {
-    /// Apply poison to something
+    /// Apply poison
     Poison(PoisonCommand),
-    /// Choose a character for a player
+    /// Choose a character
     Character(CharacterCommand),
     /// Slot an ability
     Slot(SlotCommand),
+    /// Equip a weapon
+    Weapon(WeaponCommand),
+    /// Set health
+    Health(HealthCommand),
+}
+
+#[derive(Event, Args)]
+pub struct HealthCommand {
+    #[arg()]
+    /// The id of the entity to choose
+    pub target: u64,
+    #[arg()]
+    /// The target health
+    pub amount: u16,
+}
+
+pub fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
+    let Some(mut target) = healths.iter_mut().find_map(|(id, health)| {
+        if **id == event.target {
+            Some(health)
+        } else {
+            None
+        }
+    }) else {
+        error!("target not found");
+        return;
+    };
+
+    target.current = event.amount;
+}
+
+#[derive(Event, Args)]
+pub struct WeaponCommand {
+    #[arg()]
+    /// The id of the entity to choose
+    pub target: u64,
+    #[arg()]
+    /// The name of the weapon to choose
+    pub weapon: String,
+}
+
+#[instrument(skip_all)]
+pub fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
+    let Some(player) = players.iter().find_map(|(id, entity)| {
+        if **id == event.target {
+            Some(entity)
+        } else {
+            None
+        }
+    }) else {
+        error!("target not found");
+        return;
+    };
+
+    match event.weapon.as_str() {
+        "placeholder" => {
+            commands.entity(player).insert(PlaceholderGun);
+        }
+        _ => error!("unknown weapon"),
+    }
 }
 
 #[derive(Event, Args)]
@@ -48,7 +110,7 @@ pub struct CharacterCommand {
 #[instrument(skip_all)]
 pub fn character(
     event: On<CharacterCommand>,
-    players: Query<(&Id, Entity), With<Player>>,
+    players: Query<(&Id, Entity)>,
     mut commands: Commands,
 ) {
     let Some(player) = players.iter().find_map(|(id, entity)| {
@@ -58,7 +120,7 @@ pub fn character(
             None
         }
     }) else {
-        error!("no player found with given id");
+        error!("target not found");
         return;
     };
 
@@ -116,7 +178,7 @@ pub fn slot(
             error!("invalid slot");
         }
     } else {
-        error!("no character found with given id")
+        error!("target not found")
     }
 }
 
@@ -192,6 +254,8 @@ pub fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
             Ok(Command::Poison(cmd)) => commands.trigger(cmd),
             Ok(Command::Slot(cmd)) => commands.trigger(cmd),
             Ok(Command::Character(cmd)) => commands.trigger(cmd),
+            Ok(Command::Weapon(cmd)) => commands.trigger(cmd),
+            Ok(Command::Health(cmd)) => commands.trigger(cmd),
             Err(_) => {}
         }
     });

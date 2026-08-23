@@ -26,7 +26,7 @@ use lightyear::prelude::client::ClientPlugins;
 use raid_race_lib::{
     TICK_PERIOD,
     component::alive::player::Player,
-    input::{Ability, Jump, Look, Walk},
+    input::{Ability, Attack, Jump, Look, Walk},
 };
 
 pub fn hud(app: &mut App) {
@@ -82,6 +82,7 @@ pub fn player(app: &mut App) {
     .add_observer(player::add_bindings_on_action_spawn::<Ability<3>, Player, Player>)
     .add_observer(player::add_bindings_on_action_spawn::<Ability<4>, Player, Player>)
     .add_observer(player::add_bindings_on_action_spawn::<Ability<5>, Player, Player>)
+    .add_observer(player::add_bindings_on_action_spawn::<Attack, Player, Player>)
     .add_observer(add_bindings_on_owner_spawn!(Player {
         players: Player[
             walks: Walk,
@@ -91,7 +92,8 @@ pub fn player(app: &mut App) {
             twos: Ability<2>,
             threes: Ability<3>,
             fours: Ability<4>,
-            fives: Ability<5>
+            fives: Ability<5>,
+            attacks: Attack,
         ],
     }))
     .add_console_command::<WhoAmI, _>(player::whoami);

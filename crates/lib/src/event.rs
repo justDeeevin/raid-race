@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::{
     ecs::{
         entity::Entity,
@@ -7,11 +5,15 @@ use bevy::{
     },
     prelude::Deref,
 };
+use std::marker::PhantomData;
+
+#[derive(EntityEvent, Deref)]
+pub struct Attacked(pub Entity);
 
 #[derive(Event)]
-pub struct Attacked {
+pub struct Hit {
     pub source: Entity,
-    // pub target: Entity,
+    pub target: Entity,
 }
 
 #[derive(EntityEvent, Deref)]

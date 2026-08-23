@@ -1,6 +1,6 @@
 use crate::{
     component::alive::{Dps, Health, player::AttackTimer},
-    event::Attacked,
+    event::Hit,
 };
 use bevy::{
     app::App,
@@ -33,7 +33,7 @@ abilities! {
     Strike(event, mut params| Query<(&mut AttackTimer, &mut Warrior)>) {
         if let Ok((mut timer, mut warrior)) = params.get_mut(**event) {
             tracing::info!("strike!");
-            timer.reset();
+            timer.almost_finish();
             warrior.strike = true;
         }
     },
@@ -41,19 +41,21 @@ abilities! {
 }
 
 fn strike_bonus(
-    event: On<Attacked>,
+    event: On<Hit>,
     mut warrior: Query<(&mut Warrior, &Dps)>,
-    // mut target: Query<&mut Health>,
+    mut target: Query<&mut Health>,
 ) {
     let Ok((mut warrior, Dps(dps))) = warrior.get_mut(event.source) else {
         return;
     };
 
     if warrior.strike
-    // && let Ok(mut target) = target.get_mut(event.target)
+        && let Ok(mut target) = target.get_mut(event.target)
     {
         warrior.strike = false;
-        // target.current -= (*dps as f32 * (warrior.strike_percent as f32 / 100.0)) as u16
+        target.current = target
+            .current
+            .saturating_sub((*dps as f32 * (warrior.strike_percent as f32 / 100.0)) as u16);
     }
 }
 

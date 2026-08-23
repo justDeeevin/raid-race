@@ -49,5 +49,7 @@ pub fn console(app: &mut App) {
 
     app.add_observer(console::poison)
         .add_observer(console::slot)
+        .add_observer(console::weapon)
+        .add_observer(console::health)
         .add_observer(console::character);
 }

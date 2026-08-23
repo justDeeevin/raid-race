@@ -1,4 +1,5 @@
 pub mod character;
+pub mod weapon;
 
 use crate::{
     component::alive::{
@@ -17,7 +18,7 @@ use avian3d::{
         mass_properties::components::ComputedMass,
     },
     math::Vector,
-    physics_transform::Rotation,
+    physics_transform::{Position, Rotation},
     spatial_query::{RayCaster, RayHits},
 };
 use bevy::{
@@ -29,7 +30,7 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res},
     },
-    math::{DQuat, Dir3, EulerRot, Vec3},
+    math::{DQuat, Dir3, EulerRot, Quat, Vec3},
     time::Time,
     transform::components::Transform,
 };
@@ -109,6 +110,25 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
     );
 }
 
+pub fn camera_transform(target: (&Position, &Rotation, &Pitch)) -> Transform {
+    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
+    const CAMERA_DISTANCE: f32 = 5.0;
+
+    let (position, rotation, pitch) = target;
+    let mut out = Transform::default();
+
+    out.rotation = Quat::from_euler(
+        EulerRot::YXZ,
+        rotation.to_euler(EulerRot::YXZ).0 as f32,
+        **pitch as f32,
+        out.rotation.to_euler(EulerRot::YXZ).2,
+    );
+    out.translation =
+        position.as_vec3() - (out.forward() * CAMERA_DISTANCE) + (out.rotation * CAMERA_OFFSET);
+
+    out
+}
+
 fn grounded(
     casts: Query<(Entity, &RayHits), With<Player>>,
     grounded: Query<(), With<Grounded>>,
@@ -133,18 +153,15 @@ fn grounded(
 }
 
 pub fn attack(
-    event: On<Start<Attack>>,
+    event: On<Fire<Attack>>,
     mut attack_timer: Query<&mut AttackTimer>,
     mut commands: Commands,
 ) {
-    // TODO: hitscan
     if let Ok(mut attack_timer) = attack_timer.get_mut(event.context)
         && attack_timer.is_finished()
     {
         attack_timer.reset();
-        commands.trigger(Attacked {
-            source: event.context,
-        });
+        commands.trigger(Attacked(event.context));
     }
 }
 
@@ -160,6 +177,8 @@ pub fn plugin(app: &mut App) {
         .add_observer(jump)
         .add_observer(look)
         .add_observer(attack)
+        .add_observer(weapon::hit)
+        .add_observer(weapon::placeholder_gun::shoot)
         .add_plugins(character::warrior::plugin);
 }
 

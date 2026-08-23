@@ -25,7 +25,7 @@ use lightyear::{
         input::{InputRegistryExt, bei::InputPlugin},
     },
 };
-use player::character::Cooldowns;
+use player::{character::Cooldowns, weapon::placeholder_gun::PlaceholderGun};
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::LazyLock,
@@ -81,26 +81,26 @@ pub fn plugin(app: &mut App) {
     }
 
     replicate!(
-        Player,
-        Id,
-        AttackTimer,
-        Health,
-        Defense,
-        Mana,
-        Dps,
         Agility,
+        AttackTimer,
         Cdr,
-        Luck,
-        Pitch,
-        Poison,
+        Defense,
         DefenseUp,
         DefenseUp,
-        DpsUp,
+        Dps,
         DpsDown,
+        DpsUp,
+        Health,
+        Id,
+        Luck,
+        Mana,
+        Pitch,
+        PlaceholderGun,
+        Player,
+        Poison,
     );
 
     app.component::<Cooldowns>().replicate_once();
-
     app.component::<Pitch>().predict();
 
     app.add_plugins(InputPlugin::<Player>::default())

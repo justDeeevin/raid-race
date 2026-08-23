@@ -17,13 +17,11 @@ use bevy::{
         system::{Commands, Query, Single},
     },
     input::{
+        ButtonState,
         keyboard::{KeyCode, KeyboardInput},
         mouse::{MouseButton, MouseButtonInput},
     },
-    math::{
-        EulerRot, Quat, Vec3,
-        primitives::{Capsule3d, Cuboid},
-    },
+    math::primitives::{Capsule3d, Cuboid},
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
     scene::{EntityCommandsSceneExt, bsn},
@@ -45,8 +43,8 @@ use raid_race_lib::{
         Id,
         player::{Pitch, Player},
     },
-    input::{Ability, Jump, Look, Walk},
-    player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, physics_components},
+    input::{Ability, Attack, Jump, Look, Walk},
+    player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
 };
 
 #[derive(Parser, ConsoleCommand)]
@@ -122,6 +120,12 @@ impl Binds for Ability<5> {
     }
 }
 
+impl Binds for Attack {
+    fn bindings() -> impl Bundle {
+        bindings![MouseButton::Left]
+    }
+}
+
 /// Adds bindings to an action entity when it spawns
 pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     event: On<Insert, (Action<A>, ActionOf<Context>)>,
@@ -171,7 +175,7 @@ pub(crate) use add_bindings_on_owner_spawn;
 
 pub fn spawn(
     event: On<Add, Player>,
-    controlled: Query<(), With<Controlled>>,
+    controlled: Query<&Id, With<Controlled>>,
     mut commands: Commands,
     camera: Query<Entity, With<Camera3d>>,
 ) {
@@ -193,36 +197,30 @@ pub fn spawn(
         ))
         .insert(physics_components());
 
-    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
-
-    if controlled.get(event.entity).is_ok() {
+    if let Ok(id) = controlled.get(event.entity) {
         commands
             .entity(camera.single().expect("multiple cameras"))
-            .insert(OrbitCamera {
-                target: event.entity,
-                offset: CAMERA_OFFSET,
-            });
+            .insert(OrbitCamera(*id));
     }
 }
 
 pub fn orbit(
-    targets: Query<(&Position, &Rotation, &Pitch)>,
+    targets: Query<(&Id, &Position, &Rotation, &Pitch)>,
     cameras: Query<(&mut Transform, &OrbitCamera)>,
 ) {
-    for (mut transform, OrbitCamera { target, offset }) in cameras {
-        let (position, rotation, pitch) =
-            targets.get(*target).expect("orbit camera target not found");
+    for (mut transform, OrbitCamera(target)) in cameras {
+        let target = targets
+            .iter()
+            .find_map(|(id, pos, rot, pitch)| {
+                if **id == **target {
+                    Some((pos, rot, pitch))
+                } else {
+                    None
+                }
+            })
+            .expect("orbit camera target not found");
 
-        transform.rotation = Quat::from_euler(
-            EulerRot::YXZ,
-            rotation.to_euler(EulerRot::YXZ).0 as f32,
-            **pitch as f32,
-            transform.rotation.to_euler(EulerRot::YXZ).2,
-        );
-
-        transform.translation = position.as_vec3()
-            - (transform.forward() * OrbitCamera::ORBIT_DISTANCE)
-            + (transform.rotation * offset);
+        *transform = camera_transform(target);
     }
 }
 
@@ -236,8 +234,12 @@ pub fn grabber(
     #[allow(clippy::unwrap_used, reason = "there's always only one primary window")]
     let mut options = options.single_mut().unwrap();
     let (entity, looking) = *player;
-    let click = button.read().any(|b| b.button == MouseButton::Left);
-    let esc = key.read().any(|k| k.key_code == KeyCode::Escape);
+    let click = button
+        .read()
+        .any(|b| b.button == MouseButton::Left && b.state == ButtonState::Released);
+    let esc = key
+        .read()
+        .any(|k| k.key_code == KeyCode::Escape && k.state == ButtonState::Pressed);
 
     if click && esc {
         return;

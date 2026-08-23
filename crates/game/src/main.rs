@@ -25,7 +25,7 @@ fn main() {
             plugin::client,
             plugin::player,
             plugin::hud,
-            // avian3d::debug_render::PhysicsDebugPlugin,
+            avian3d::debug_render::PhysicsDebugPlugin,
         ))
         .add_systems(Startup, |mut commands: Commands| {
             commands.spawn((

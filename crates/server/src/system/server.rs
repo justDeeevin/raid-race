@@ -115,7 +115,7 @@ pub fn join(
         return;
     };
 
-    entity::player(100, 40, 100)
+    entity::player(100, 40, 10)
         .build()
         .spawn(&mut commands, *id, &mut ids, event.entity);
 

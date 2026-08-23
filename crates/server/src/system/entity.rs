@@ -61,6 +61,9 @@ impl Player {
     ) -> EntityCommands<'a> {
         let client_replicate = Replicate::to_clients(NetworkTarget::Single(id));
 
+        let mut attack = Timer::from_seconds(1.0, TimerMode::Once);
+        attack.almost_finish();
+
         commands.spawn((
             (
                 PlayerComponent(id),
@@ -84,7 +87,7 @@ impl Player {
                     (Action::<Ability<5>>::new(), client_replicate.clone()),
                     (Action::<Attack>::new(), client_replicate.clone()),
                 ]),
-                AttackTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+                AttackTimer(attack),
             ),
             physics_components(),
             self.init_pos,

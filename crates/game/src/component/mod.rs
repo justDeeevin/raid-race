@@ -1,16 +1,7 @@
 pub mod ui;
 
-use bevy::{
-    ecs::{component::Component, entity::Entity},
-    math::Vec3,
-};
+use bevy::ecs::component::Component;
+use raid_race_lib::component::alive::Id;
 
 #[derive(Component)]
-pub struct OrbitCamera {
-    pub target: Entity,
-    pub offset: Vec3,
-}
-
-impl OrbitCamera {
-    pub const ORBIT_DISTANCE: f32 = 5.0;
-}
+pub struct OrbitCamera(pub Id);
