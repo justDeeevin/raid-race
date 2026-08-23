@@ -1,5 +1,5 @@
 use crate::system::{
-    client::{self, AuthServer, ConnectCommand, DisconnectCommand, TokenTask},
+    client::{self, AuthCommand, AuthServer, ConnectCommand, DisconnectCommand, TokenTask},
     player::{self, WhoAmI, add_bindings_on_owner_spawn},
     ui::hud,
 };
@@ -61,6 +61,7 @@ pub fn client(app: &mut App) {
     )
     .add_console_command::<ConnectCommand, _>(client::connect_command)
     .add_console_command::<DisconnectCommand, _>(client::disconnect_command)
+    .add_console_command::<AuthCommand, _>(client::auth_command)
     .init_resource::<AuthServer>();
 }
 

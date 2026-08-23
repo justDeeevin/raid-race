@@ -41,12 +41,34 @@ pub struct ConnectCommand {
 /// Disconnect from the current server
 pub struct DisconnectCommand;
 
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "auth")]
+/// Set the address of the auth server
+pub struct AuthCommand {
+    #[arg()]
+    pub address: String,
+}
+
 #[derive(Resource, Deref, DerefMut)]
 pub struct AuthServer(IpAddr);
 
 impl Default for AuthServer {
     fn default() -> Self {
         Self(IpAddr::V4(Ipv4Addr::LOCALHOST))
+    }
+}
+
+pub fn auth_command(mut cmd: ConsoleCommand<AuthCommand>, mut auth_server: ResMut<AuthServer>) {
+    let Some(Ok(AuthCommand { address })) = cmd.take() else {
+        return;
+    };
+
+    if address == "localhost" {
+        **auth_server = IpAddr::V4(Ipv4Addr::LOCALHOST);
+    } else if let Ok(addr) = address.parse() {
+        **auth_server = addr;
+    } else {
+        cmd.reply_failed("invalid address");
     }
 }
 
