@@ -47,6 +47,7 @@ pub fn shoot(
     ) && let Some(hit) = space.cast_ray(**target.0, dir, MAX_DISTANCE, false, &filter)
         && hit.entity == camera_hit.entity
     {
+        tracing::info!("hit");
         commands.trigger(Hit {
             source: **event,
             target: hit.entity,

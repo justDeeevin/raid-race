@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Unique identifier for living entities
 pub struct Id(pub u64);
 
-#[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+#[derive(Component, Serialize, Deserialize, Deref, DerefMut, Clone, Default)]
 pub struct Health(pub Meter);
 
 impl Health {
@@ -71,7 +71,7 @@ pub struct Defense(pub i16);
 /// A percent between 0 and 100
 pub struct Luck(pub u8);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Meter {
     pub cap: u16,
     pub current: u16,

@@ -3,12 +3,13 @@ pub mod weapon;
 
 use crate::{
     component::alive::{
-        Agility,
+        Agility, Health,
         player::{AttackTimer, Grounded, Pitch, Player},
     },
     event::Attacked,
     input::{Attack, Jump, Look, Walk},
     player::character::ability_cooldown,
+    scene::Dummy,
 };
 use avian3d::{
     collision::collider::Collider,
@@ -171,15 +172,27 @@ fn attack_cooldown(attack_timer: Query<&mut AttackTimer>, time: Res<Time>) {
     }
 }
 
+fn dummy(health: Query<&mut Health, With<Dummy>>) {
+    for mut health in health {
+        if health.current < health.cap {
+            tracing::info!(damage = health.cap - health.current, "dummy hit");
+        }
+        health.current = health.cap;
+    }
+}
+
 pub fn plugin(app: &mut App) {
-    app.add_systems(FixedUpdate, (grounded, attack_cooldown, ability_cooldown))
-        .add_observer(walk)
-        .add_observer(jump)
-        .add_observer(look)
-        .add_observer(attack)
-        .add_observer(weapon::hit)
-        .add_observer(weapon::placeholder_gun::shoot)
-        .add_plugins(character::warrior::plugin);
+    app.add_systems(
+        FixedUpdate,
+        (grounded, attack_cooldown, ability_cooldown, dummy),
+    )
+    .add_observer(walk)
+    .add_observer(jump)
+    .add_observer(look)
+    .add_observer(attack)
+    .add_observer(weapon::hit)
+    .add_observer(weapon::placeholder_gun::shoot)
+    .add_plugins(character::warrior::plugin);
 }
 
 pub fn physics_components() -> impl Bundle {

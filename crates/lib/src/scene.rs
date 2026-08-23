@@ -1,3 +1,7 @@
+use crate::{
+    component::alive::Health,
+    player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS},
+};
 use avian3d::{
     collision::collider::Collider,
     dynamics::rigid_body::{Friction, RigidBody},
@@ -6,13 +10,17 @@ use avian3d::{
 use bevy::{
     asset::asset_value,
     color::Color,
+    ecs::{component::Component, template::FromTemplate},
     light::PointLight,
-    math::primitives::Cuboid,
+    math::primitives::{Capsule3d, Cuboid},
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
     scene::{SceneList, bsn_list, template_value},
     transform::components::Transform,
 };
+
+#[derive(Component, FromTemplate)]
+pub struct Dummy;
 
 pub fn test() -> impl SceneList {
     bsn_list![
@@ -62,5 +70,13 @@ pub fn test() -> impl SceneList {
             }
             Transform::from_xyz(0.0, 8.0, 0.0)
         ),
+        (
+            Dummy
+            Health::new(100)
+            Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH)
+            Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS as f32, PLAYER_CAPSULE_LENGTH as f32)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::BLACK))
+            Position::from_xyz(0.0, (PLAYER_HEIGHT / 2.0) + 1.0, 3.0)
+        )
     ]
 }

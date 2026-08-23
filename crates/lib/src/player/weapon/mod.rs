@@ -7,7 +7,7 @@ use crate::{
 use bevy::ecs::{observer::On, system::Query};
 
 pub fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackTimer)>, mut health: Query<&mut Health>) {
-    let Ok((Dps(damage), AttackTimer(timer))) = damage.get(event.target) else {
+    let Ok((Dps(damage), AttackTimer(timer))) = damage.get(event.source) else {
         return;
     };
 
