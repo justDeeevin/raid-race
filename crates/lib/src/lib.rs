@@ -13,6 +13,7 @@ use avian3d::{
 use bevy::{
     app::{App, PluginGroup, Startup},
     scene::SpawnListSystem,
+    time::Timer,
 };
 use component::alive::{player::*, status::*, *};
 use input::*;
@@ -127,4 +128,11 @@ pub fn plugin(app: &mut App) {
     ));
 
     app.add_systems(Startup, scene::test.spawn());
+}
+
+// TODO: unnecessary if/when bevyengine/bevy#25542 gets merged
+fn almost_finish_safe(timer: &mut Timer) {
+    if !timer.is_finished() {
+        timer.almost_finish();
+    }
 }

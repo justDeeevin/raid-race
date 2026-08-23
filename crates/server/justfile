@@ -1,7 +1,7 @@
 set shell := ["nu", "-c"]
 
 self-sign:
-    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -keyout key.pem -out cert.pem -days 14 -nodes -config cert.cnf
+    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -days 14 -config cert.cnf -keyout key.pem -out cert.pem
     openssl x509 -in cert.pem -outform DER -out cert.der
     openssl pkcs8 -topk8 -nocrypt -in key.pem -outform DER -out key.der
 

@@ -16,6 +16,7 @@ serde.workspace = true
 bevy_enhanced_input = "0.26.0"
 tracing.workspace = true
 totp-rs = { version = "6.0.0", default-features = false, features = ["std"] }
+either.workspace = true
 
 [lints]
 workspace = true

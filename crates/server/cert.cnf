@@ -1,8 +1,9 @@
 [req]
 prompt = no
 default_md = sha256
-distinguished_name = subject
 x509_extensions = v3_server
+distinguished_name = subject
+encrypt_key = no
 
 [subject]
 C = US

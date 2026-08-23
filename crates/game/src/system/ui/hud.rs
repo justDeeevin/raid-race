@@ -1,4 +1,5 @@
 use crate::component::ui::hud::{Ability, HealthBar, ManaBar};
+use avian3d::parry::either::Either;
 use bevy::{
     color::Color,
     ecs::{
@@ -13,7 +14,7 @@ use bevy::{
         world::Ref,
     },
     scene::{CommandsSceneExt, Scene, bsn},
-    text::{FontSize, TextColor, TextFont},
+    text::{FontSize, Justify, TextColor, TextFont, TextLayout},
     ui::{
         AlignItems, BackgroundColor, BorderColor, Display, FlexDirection, GridPlacement,
         JustifyContent, Node, RepeatedGridTrack, UiRect, percent, px, vh, vw, widget::Text,
@@ -88,11 +89,21 @@ pub fn ability_cooldown<const N: u8>(
 {
     for (mut text, Ability(target)) in hud {
         if let Ok(cooldowns) = cd.get(*target) {
-            let cd = &cooldowns[N as usize - 1];
-            if cd.is_finished() {
-                **text = "Ready".to_string();
-            } else {
-                **text = cd.remaining_secs().ceil().to_string();
+            match &cooldowns[N as usize - 1] {
+                Either::Left(cd) => {
+                    if cd.is_finished() {
+                        **text = "Ready".to_string();
+                    } else {
+                        **text = cd.remaining_secs().ceil().to_string();
+                    }
+                }
+                Either::Right(ready) => {
+                    if *ready {
+                        **text = "Ready".to_string();
+                    } else {
+                        **text = "Not ready".to_string();
+                    }
+                }
             }
         }
     }
@@ -254,6 +265,7 @@ where
         Children [
             Ability::<N>(target)
             Text
+            TextLayout::justify(Justify::Center)
             TextColor(Color::BLACK)
         ]
     }

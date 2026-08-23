@@ -36,6 +36,8 @@ pub fn shoot(
     let camera = camera_transform(target);
     let filter = SpatialQueryFilter::from_excluded_entities([**event]);
 
+    tracing::info!("bang!");
+
     if let Some(camera_hit) = space.cast_ray(
         camera.translation.as_dvec3(),
         camera.forward(),
@@ -47,7 +49,6 @@ pub fn shoot(
     ) && let Some(hit) = space.cast_ray(**target.0, dir, MAX_DISTANCE, false, &filter)
         && hit.entity == camera_hit.entity
     {
-        tracing::info!("hit");
         commands.trigger(Hit {
             source: **event,
             target: hit.entity,

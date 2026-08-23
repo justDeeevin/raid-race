@@ -7,7 +7,6 @@ use bevy::{
         system::{Commands, Query},
     },
     platform::cell::SyncCell,
-    time::{Timer, TimerMode},
 };
 use clap::{Args, Parser, error::ErrorKind};
 use raid_race_lib::{
@@ -137,14 +136,11 @@ pub fn character(
 
     match event.character.as_str() {
         "warrior" => {
+            let abilities = Abilities::<warrior::AbilityId>::default();
             commands.entity(player).insert((
-                Abilities::<warrior::AbilityId>::default(),
+                Cooldowns::from(&abilities),
+                abilities,
                 Warrior::new(10),
-                Cooldowns(std::array::from_fn(|_| {
-                    let mut out = Timer::new(Duration::from_secs(5), TimerMode::Once);
-                    out.almost_finish();
-                    out
-                })),
             ));
         }
         _ => error!("unknown character"),
@@ -178,6 +174,7 @@ pub fn slot(
     }) {
         let id = match event.ability.as_str() {
             "strike" => warrior::AbilityId::Strike,
+            "combo" => warrior::AbilityId::StrikeCombo,
             _ => {
                 error!("unknown ability for warrior");
                 return;
