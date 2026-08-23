@@ -46,9 +46,17 @@ pub struct HealthCommand {
     #[arg()]
     /// The id of the entity to choose
     pub target: u64,
-    #[arg()]
+    #[arg(value_parser = |s: &str| if s == "max" {Ok(HealthInput::Max)} else {s.parse().map(HealthInput::Amount)})]
     /// The target health
-    pub amount: u16,
+    ///
+    /// Either a number or "max"
+    pub amount: HealthInput,
+}
+
+#[derive(Clone)]
+pub enum HealthInput {
+    Max,
+    Amount(u16),
 }
 
 pub fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
@@ -63,7 +71,10 @@ pub fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) 
         return;
     };
 
-    target.current = event.amount;
+    target.current = match event.amount {
+        HealthInput::Amount(amount) => amount,
+        HealthInput::Max => target.cap,
+    };
 }
 
 #[derive(Event, Args)]
