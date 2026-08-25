@@ -1,4 +1,3 @@
-mod plugin;
 mod system;
 
 use bevy::{
@@ -8,6 +7,7 @@ use bevy::{
     window::{ExitCondition, WindowPlugin},
 };
 use raid_race_lib::component::alive::Id;
+use system::*;
 
 fn main() {
     App::default()
@@ -17,9 +17,9 @@ fn main() {
                 exit_condition: ExitCondition::DontExit,
                 ..Default::default()
             }),
-            plugin::server,
-            plugin::status,
-            plugin::console,
+            server::plugin,
+            status::plugin,
+            console::plugin,
         ))
         .init_resource::<Ids>()
         .run();

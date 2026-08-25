@@ -4,6 +4,7 @@ use async_lock::RwLock;
 use async_net::TcpListener;
 use avian3d::parry::utils::hashset::HashSet;
 use bevy::{
+    app::{App, Startup},
     ecs::{
         lifecycle::Add,
         observer::On,
@@ -24,17 +25,17 @@ use lightyear::{
     core::id::{PeerId, RemoteId},
     link::server::LinkOf,
     netcode::{NetcodeServer, server_plugin::NetcodeConfig},
-    prelude::{Identity, LocalAddr, ReplicationSender},
+    prelude::{Identity, LocalAddr, ReplicationSender, server::ServerPlugins},
     webtransport::server::WebTransportServerIo,
 };
-use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, SERVER_ADDR, TOTP};
+use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, SERVER_ADDR, TICK_PERIOD, TOTP};
 use std::{net::SocketAddr, sync::Arc};
 use wtransport::tls::{Certificate, CertificateChain, PrivateKey};
 
 #[derive(Resource, Deref, DerefMut, Default)]
-pub struct ClientIds(Arc<RwLock<HashSet<u64>>>);
+struct ClientIds(Arc<RwLock<HashSet<u64>>>);
 
-pub fn serve(mut commands: Commands, ids: Res<ClientIds>) {
+fn serve(mut commands: Commands, ids: Res<ClientIds>) {
     let entity = commands
         .spawn((
             NetcodeServer::new(
@@ -72,7 +73,7 @@ async fn id_server(ids: Arc<RwLock<HashSet<u64>>>) {
 
     loop {
         let (stream, client_addr) = socket.accept().await.expect("failed to accept connection");
-        let span = tracing::info_span!("id connection", %client_addr);
+        let span = tracing::info_span!("id request", %client_addr);
         let _guard = span.enter();
         async_h1::accept(stream, async |req| {
             Ok(
@@ -100,11 +101,11 @@ async fn id_server(ids: Arc<RwLock<HashSet<u64>>>) {
     }
 }
 
-pub fn start_join(event: On<Add, LinkOf>, mut commands: Commands) {
+fn start_join(event: On<Add, LinkOf>, mut commands: Commands) {
     commands.entity(event.entity).insert(ReplicationSender);
 }
 
-pub fn join(
+fn join(
     event: On<Add, Connected>,
     id: Query<&RemoteId, With<ClientOf>>,
     client_ids: Res<ClientIds>,
@@ -124,12 +125,22 @@ pub fn join(
     }
 }
 
-pub fn leave(
-    event: On<Add, Disconnected>,
-    id: Query<&RemoteId, With<ClientOf>>,
-    ids: Res<ClientIds>,
-) {
+fn leave(event: On<Add, Disconnected>, id: Query<&RemoteId, With<ClientOf>>, ids: Res<ClientIds>) {
     if let Ok(RemoteId(PeerId::Netcode(id))) = id.get(event.entity) {
         ids.write_blocking().remove(id);
     };
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_plugins((
+        ServerPlugins {
+            tick_duration: TICK_PERIOD,
+        },
+        raid_race_lib::plugin,
+    ))
+    .add_systems(Startup, serve)
+    .add_observer(start_join)
+    .add_observer(join)
+    .add_observer(leave)
+    .init_resource::<ClientIds>();
 }

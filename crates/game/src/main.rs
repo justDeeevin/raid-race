@@ -1,18 +1,24 @@
 mod component;
-mod plugin;
 mod system;
 
 use bevy::{
     DefaultPlugins,
     app::{App, PluginGroup, Startup},
     camera::Camera3d,
-    ecs::system::Commands,
+    ecs::{query::With, system::Commands, world::World},
     log::LogPlugin,
     math::{Dir3, Vec3},
     transform::components::Transform,
 };
 use bevy_console::ConsolePlugin;
+use bevy_inspector_egui::{
+    DefaultInspectorConfigPlugin,
+    bevy_egui::{EguiContext, EguiPrimaryContextPass, PrimaryEguiContext},
+    bevy_inspector,
+    egui::{ScrollArea, Window},
+};
 use component::AimCamera;
+use system::*;
 
 fn main() {
     App::default()
@@ -22,11 +28,11 @@ fn main() {
                 ..Default::default()
             }),
             ConsolePlugin,
+            client::plugin,
+            player::plugin,
+            ui::hud::plugin,
             // plugin::inspector,
-            plugin::client,
-            plugin::player,
-            plugin::hud,
-            avian3d::debug_render::PhysicsDebugPlugin,
+            // avian3d::debug_render::PhysicsDebugPlugin,
         ))
         .add_systems(Startup, |mut commands: Commands| {
             commands.spawn((
@@ -36,4 +42,29 @@ fn main() {
             ));
         })
         .run();
+}
+
+#[allow(unused)]
+fn inspector(app: &mut App) {
+    fn ui(world: &mut World) {
+        let Ok(mut ctx) = world
+            .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
+            .single(world)
+            .cloned()
+        else {
+            return;
+        };
+
+        Window::new("World Inspector")
+            .default_size((400.0, 300.0))
+            .show(ctx.get_mut(), |ui| {
+                ScrollArea::both().show(ui, |ui| {
+                    bevy_inspector::ui_for_world(world, ui);
+                    ui.allocate_space(ui.available_size());
+                })
+            });
+    }
+
+    app.add_plugins(DefaultInspectorConfigPlugin)
+        .add_systems(EguiPrimaryContextPass, ui);
 }

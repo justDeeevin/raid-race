@@ -3,12 +3,12 @@ pub mod weapon;
 
 use crate::{
     component::alive::{
-        Agility, Health,
+        Agility, Dps, Health,
         player::{AttackTimer, Grounded, Pitch, Player},
     },
-    event::Attacked,
+    event::{Attacked, Hit},
     input::{Attack, Jump, Look, Walk},
-    player::character::ability_cooldown,
+    player::character::Cooldowns,
     scene::Dummy,
 };
 use avian3d::{
@@ -36,6 +36,7 @@ use bevy::{
     transform::components::Transform,
 };
 use bevy_enhanced_input::action::events::{Fire, Start};
+use either::Either;
 
 pub const PLAYER_RADIUS: f64 = 0.5;
 pub const PLAYER_HEIGHT: f64 = 2.0;
@@ -153,7 +154,7 @@ fn grounded(
     }
 }
 
-pub fn attack(
+fn attack(
     event: On<Fire<Attack>>,
     mut attack_timer: Query<&mut AttackTimer>,
     mut commands: Commands,
@@ -166,12 +167,6 @@ pub fn attack(
     }
 }
 
-fn attack_cooldown(attack_timer: Query<&mut AttackTimer>, time: Res<Time>) {
-    for mut timer in attack_timer {
-        timer.tick(time.delta());
-    }
-}
-
 fn dummy(health: Query<&mut Health, With<Dummy>>) {
     for mut health in health {
         if health.current < health.cap {
@@ -181,16 +176,44 @@ fn dummy(health: Query<&mut Health, With<Dummy>>) {
     }
 }
 
+fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>) {
+    for mut cooldowns in cooldowns {
+        for cooldown in &mut **cooldowns {
+            if let Either::Left(timer) = cooldown {
+                timer.tick(time.delta());
+            }
+        }
+    }
+}
+
+fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackTimer)>, mut health: Query<&mut Health>) {
+    let Ok((Dps(damage), AttackTimer(timer))) = damage.get(event.source) else {
+        return;
+    };
+
+    if let Ok(mut health) = health.get_mut(event.target) {
+        health.current = health
+            .current
+            .saturating_sub((*damage as f32 * timer.duration().as_secs_f32()) as u16);
+    }
+}
+
+fn attack_cooldown(attack_timer: Query<&mut AttackTimer>, time: Res<Time>) {
+    for mut timer in attack_timer {
+        timer.tick(time.delta());
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (grounded, attack_cooldown, ability_cooldown, dummy),
+        (grounded, dummy, ability_cooldown, attack_cooldown),
     )
     .add_observer(walk)
     .add_observer(jump)
     .add_observer(look)
     .add_observer(attack)
-    .add_observer(weapon::hit)
+    .add_observer(hit)
     .add_observer(weapon::placeholder_gun::shoot)
     .add_plugins(character::warrior::plugin);
 }

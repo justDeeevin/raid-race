@@ -11,7 +11,7 @@ use bevy::{
         observer::On,
         system::{Commands, Query, Res},
     },
-    time::{Fixed, Time, Timer, TimerMode},
+    time::{Time, Timer, TimerMode},
 };
 use either::Either;
 use lightyear::prelude::AppComponentExt;
@@ -112,7 +112,7 @@ fn strike_bonus(
 
 fn combo_window(
     warriors: Query<(&mut Warrior, &mut Cooldowns, &Abilities<AbilityId>)>,
-    time: Res<Time<Fixed>>,
+    time: Res<Time>,
 ) {
     for (mut warrior, mut cooldowns, abilities) in warriors {
         if let Some(timer) = &mut warrior.combo_window {
@@ -132,6 +132,7 @@ fn combo_window(
 pub fn plugin(app: &mut App) {
     add_ability_systems(app);
     app.add_systems(FixedUpdate, combo_window)
-        .add_observer(strike_bonus);
-    app.component::<Warrior>().replicate();
+        .add_observer(strike_bonus)
+        .component::<Warrior>()
+        .replicate();
 }

@@ -1,6 +1,7 @@
 use crate::component::ui::hud::{Ability, HealthBar, ManaBar};
 use avian3d::parry::either::Either;
 use bevy::{
+    app::{App, Update},
     color::Color,
     ecs::{
         change_detection::DetectChanges,
@@ -30,7 +31,7 @@ use raid_race_lib::{
     player::character::Cooldowns,
 };
 
-pub fn health_bar(
+fn health_bar(
     bar: Query<(&mut Node, &HealthBar, &mut Text)>,
     health: Query<&Health, Changed<Health>>,
 ) {
@@ -42,7 +43,7 @@ pub fn health_bar(
     }
 }
 
-pub fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
+fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
     if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
         if event.entity == **entity {
             Some(color)
@@ -54,10 +55,7 @@ pub fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut Bac
     }
 }
 
-pub fn remove_poison(
-    event: On<Remove, Poison>,
-    mut color: Query<(&HealthBar, &mut BackgroundColor)>,
-) {
+fn remove_poison(event: On<Remove, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
     if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
         if event.entity == **entity {
             Some(color)
@@ -69,7 +67,7 @@ pub fn remove_poison(
     }
 }
 
-pub fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>) {
+fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>) {
     for (mut node, ManaBar(entity), mut text) in bar {
         let Ok(mana) = mana.get(*entity) else {
             continue;
@@ -81,7 +79,7 @@ pub fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Ma
     }
 }
 
-pub fn ability_cooldown<const N: u8>(
+fn ability_cooldown<const N: u8>(
     hud: Query<(&mut Text, &Ability<N>)>,
     cd: Query<&Cooldowns, With<Controlled>>,
 ) where
@@ -110,9 +108,9 @@ pub fn ability_cooldown<const N: u8>(
 }
 
 #[derive(Component, Default, Clone, Copy)]
-pub struct HudRoot;
+struct HudRoot;
 
-pub fn spawn(
+fn spawn(
     event: On<Add, (Player, Controlled)>,
     me: Query<(), (With<Health>, With<Mana>, With<Player>, With<Controlled>)>,
     hud: Query<Entity, With<HudRoot>>,
@@ -123,11 +121,7 @@ pub fn spawn(
     }
 }
 
-pub fn despawn(
-    _: On<Add, Disconnected>,
-    hud: Single<Entity, With<HudRoot>>,
-    mut commands: Commands,
-) {
+fn despawn(_: On<Add, Disconnected>, hud: Single<Entity, With<HudRoot>>, mut commands: Commands) {
     commands.entity(*hud).despawn();
 }
 
@@ -269,4 +263,23 @@ where
             TextColor(Color::BLACK)
         ]
     }
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            health_bar,
+            mana_bar,
+            ability_cooldown::<1>,
+            ability_cooldown::<2>,
+            ability_cooldown::<3>,
+            ability_cooldown::<4>,
+            ability_cooldown::<5>,
+        ),
+    )
+    .add_observer(spawn)
+    .add_observer(despawn)
+    .add_observer(add_poison)
+    .add_observer(remove_poison);
 }

@@ -1,4 +1,5 @@
 use bevy::{
+    app::{App, Update},
     ecs::{
         component::{Component, Mutable},
         entity::Entity,
@@ -8,10 +9,10 @@ use bevy::{
 };
 use raid_race_lib::component::alive::{
     Dps, Health,
-    status::{Poison, StackableStatusEffect},
+    status::{DefenseDown, DefenseUp, DpsDown, DpsUp, Poison, StackableStatusEffect},
 };
 
-pub fn poison(
+fn poison(
     mut commands: Commands,
     time: Res<Time>,
     afflicted: Query<(Entity, &mut Health, &mut Poison)>,
@@ -29,7 +30,7 @@ pub fn poison(
     }
 }
 
-pub fn stat_change<
+fn stat_change<
     T: Component<Mutability = Mutable> + std::ops::DerefMut<Target = StackableStatusEffect>,
 >(
     mut commands: Commands,
@@ -42,4 +43,17 @@ pub fn stat_change<
             commands.entity(entity).remove::<T>();
         }
     }
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            poison,
+            stat_change::<DefenseUp>,
+            stat_change::<DefenseDown>,
+            stat_change::<DpsUp>,
+            stat_change::<DpsDown>,
+        ),
+    );
 }

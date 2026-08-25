@@ -1,16 +1,18 @@
 use async_net::TcpStream;
 use bevy::{
+    app::{App, Update},
     ecs::{
         entity::Entity,
         query::With,
         resource::Resource,
+        schedule::{IntoScheduleConfigs, common_conditions::resource_exists},
         system::{Commands, Query, Res, ResMut},
     },
     prelude::{Deref, DerefMut},
     tasks::{IoTaskPool, Task, block_on, poll_once},
 };
 use bevy_console::{
-    ConsoleCommand,
+    AddConsoleCommand, ConsoleCommand,
     clap::{self, Parser},
 };
 use futures::TryFutureExt;
@@ -18,39 +20,39 @@ use http_types::Request;
 use lightyear::{
     connection::client::{Client, Connect, Connected, Disconnect},
     netcode::{ConnectToken, NetcodeClient, auth::Authentication, client_plugin::NetcodeConfig},
-    prelude::{LocalAddr, PeerAddr, PingManager, ReplicationReceiver},
+    prelude::{LocalAddr, PeerAddr, PingManager, ReplicationReceiver, client::ClientPlugins},
     webtransport::client::WebTransportClientIo,
 };
-use raid_race_lib::{AUTH_PORT, GAME_PORT};
+use raid_race_lib::{AUTH_PORT, GAME_PORT, TICK_PERIOD};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "connect")]
 /// Connect to a server
-pub struct ConnectCommand {
+struct ConnectCommand {
     #[arg()]
     /// The address of the server.
     ///
     /// This does not require a port number, but will accept one if
     /// specified.
-    pub address: String,
+    address: String,
 }
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "disconnect")]
 /// Disconnect from the current server
-pub struct DisconnectCommand;
+struct DisconnectCommand;
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "auth")]
 /// Set the address of the auth server
-pub struct AuthCommand {
+struct AuthCommand {
     #[arg()]
-    pub address: String,
+    address: String,
 }
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct AuthServer(IpAddr);
+struct AuthServer(IpAddr);
 
 impl Default for AuthServer {
     fn default() -> Self {
@@ -58,7 +60,7 @@ impl Default for AuthServer {
     }
 }
 
-pub fn auth_command(mut cmd: ConsoleCommand<AuthCommand>, mut auth_server: ResMut<AuthServer>) {
+fn auth_command(mut cmd: ConsoleCommand<AuthCommand>, mut auth_server: ResMut<AuthServer>) {
     let Some(Ok(AuthCommand { address })) = cmd.take() else {
         return;
     };
@@ -73,10 +75,10 @@ pub fn auth_command(mut cmd: ConsoleCommand<AuthCommand>, mut auth_server: ResMu
 }
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct TokenTask(Task<ConnectToken>);
+struct TokenTask(Task<ConnectToken>);
 
 // TODO: steam
-pub fn connect(mut commands: Commands, game_server: SocketAddr, auth_server: IpAddr) {
+fn connect(mut commands: Commands, game_server: SocketAddr, auth_server: IpAddr) {
     const CLIENT_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
     commands.spawn((
@@ -113,7 +115,7 @@ async fn get_token(game_server: IpAddr, auth_server: IpAddr) -> ConnectToken {
     ConnectToken::try_from_bytes(&bytes).expect("failed to parse connect token")
 }
 
-pub fn wait_for_token(
+fn wait_for_token(
     mut task: ResMut<TokenTask>,
     client: Query<Entity, With<Client>>,
     mut commands: Commands,
@@ -133,7 +135,7 @@ pub fn wait_for_token(
     }
 }
 
-pub fn connect_command(
+fn connect_command(
     mut cmd: ConsoleCommand<ConnectCommand>,
     auth_server: Res<AuthServer>,
     commands: Commands,
@@ -156,7 +158,7 @@ pub fn connect_command(
     connect(commands, addr, **auth_server);
 }
 
-pub fn disconnect_command(
+fn disconnect_command(
     mut cmd: ConsoleCommand<DisconnectCommand>,
     client: Query<Entity, (With<Client>, With<Connected>)>,
     mut commands: Commands,
@@ -170,4 +172,18 @@ pub fn disconnect_command(
     } else {
         cmd.reply_failed("not connected");
     }
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_plugins((
+        ClientPlugins {
+            tick_duration: TICK_PERIOD,
+        },
+        raid_race_lib::plugin,
+    ))
+    .add_systems(Update, wait_for_token.run_if(resource_exists::<TokenTask>))
+    .add_console_command::<ConnectCommand, _>(connect_command)
+    .add_console_command::<DisconnectCommand, _>(disconnect_command)
+    .add_console_command::<AuthCommand, _>(auth_command)
+    .init_resource::<AuthServer>();
 }

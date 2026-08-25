@@ -3,6 +3,7 @@ pub mod weapon;
 use crate::component::{AimCamera, OrbitCamera};
 use avian3d::physics_transform::{Position, Rotation};
 use bevy::{
+    app::{App, Update},
     asset::asset_value,
     audio::SpatialListener,
     color::Color,
@@ -15,6 +16,7 @@ use bevy::{
         message::MessageReader,
         observer::On,
         query::{With, Without},
+        schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::on_message},
         spawn::SpawnRelated,
         system::{Commands, Query, Single},
     },
@@ -31,7 +33,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_console::{
-    ConsoleCommand,
+    AddConsoleCommand, ConsoleCommand,
     clap::{self, Parser},
 };
 use lightyear::prelude::{
@@ -54,7 +56,7 @@ use raid_race_lib::{
 /// Print the entity ID of the currently controlled player
 pub struct WhoAmI;
 
-pub fn whoami(
+fn whoami(
     mut command: ConsoleCommand<WhoAmI>,
     player: Query<&Id, (With<Player>, With<Controlled>)>,
 ) {
@@ -70,7 +72,7 @@ pub fn whoami(
 }
 
 // TODO: configurable
-pub trait Binds: InputAction {
+trait Binds: InputAction {
     fn bindings() -> impl Bundle;
 }
 
@@ -129,7 +131,7 @@ impl Binds for Attack {
 }
 
 /// Adds bindings to an action entity when it spawns
-pub fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
+fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     event: On<Insert, (Action<A>, ActionOf<Context>)>,
     actions: Query<&ActionOf<Context>, (With<Action<A>>, Without<Bindings>)>,
     controlled: Query<(), (With<Owner>, With<Controlled>)>,
@@ -173,9 +175,7 @@ macro_rules! add_bindings_on_owner_spawn {
     }}
 }
 
-pub(crate) use add_bindings_on_owner_spawn;
-
-pub fn spawn(
+fn spawn(
     event: On<Add, Player>,
     controlled: Query<&Id, With<Controlled>>,
     mut commands: Commands,
@@ -207,7 +207,7 @@ pub fn spawn(
 }
 
 // FIXME: collide with walls
-pub fn orbit(
+fn orbit(
     targets: Query<(&Id, &Position, &Rotation, &Pitch)>,
     cameras: Query<(&mut Transform, &OrbitCamera)>,
 ) {
@@ -227,7 +227,7 @@ pub fn orbit(
     }
 }
 
-pub fn grabber(
+fn grabber(
     mut button: MessageReader<MouseButtonInput>,
     mut key: MessageReader<KeyboardInput>,
     player: Single<(Entity, &ContextActivity<Player>), (With<Player>, With<Controlled>)>,
@@ -257,4 +257,40 @@ pub fn grabber(
         options.visible = true;
         options.grab_mode = CursorGrabMode::None;
     }
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            orbit,
+            grabber.run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
+        ),
+    )
+    .add_observer(spawn)
+    .add_observer(add_bindings_on_action_spawn::<Walk, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Look, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Jump, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Ability<1>, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Ability<2>, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Ability<3>, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Ability<4>, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Ability<5>, Player, Player>)
+    .add_observer(add_bindings_on_action_spawn::<Attack, Player, Player>)
+    .add_observer(add_bindings_on_owner_spawn!(Player {
+        players: Player[
+            walks: Walk,
+            looks: Look,
+            jumps: Jump,
+            ones: Ability<1>,
+            twos: Ability<2>,
+            threes: Ability<3>,
+            fours: Ability<4>,
+            fives: Ability<5>,
+            attacks: Attack,
+        ],
+    }))
+    .add_observer(weapon::placeholder_gun_assets)
+    .add_observer(weapon::placeholder_gun_fire)
+    .add_console_command::<WhoAmI, _>(whoami);
 }

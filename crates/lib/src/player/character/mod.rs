@@ -4,10 +4,10 @@ use bevy::{
         component::Component,
         entity::Entity,
         observer::On,
-        system::{Commands, Query, Res},
+        system::{Commands, Query},
     },
     prelude::{Deref, DerefMut},
-    time::{Time, Timer, TimerMode},
+    time::{Timer, TimerMode},
 };
 use bevy_enhanced_input::action::{InputAction, events::Start};
 use either::Either;
@@ -57,16 +57,6 @@ fn ability<const N: u8, A: AbilityId + Send + Sync + 'static>(
                 ability.trigger(event.context, &mut commands);
             }
             Some(_) | None => {}
-        }
-    }
-}
-
-pub fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>) {
-    for mut cooldowns in cooldowns {
-        for cooldown in &mut **cooldowns {
-            if let Either::Left(timer) = cooldown {
-                timer.tick(time.delta());
-            }
         }
     }
 }

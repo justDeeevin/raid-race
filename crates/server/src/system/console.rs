@@ -29,7 +29,7 @@ use tracing::{error, instrument};
 
 #[derive(Parser)]
 #[command(help_template = "{subcommands}")]
-pub enum Command {
+enum Command {
     /// Apply poison
     Poison(PoisonCommand),
     /// Choose a character
@@ -49,24 +49,24 @@ pub enum Command {
 }
 
 #[derive(Event, Args)]
-pub struct HealthCommand {
+struct HealthCommand {
     #[arg()]
     /// The id of the entity to choose
-    pub target: u64,
+    target: u64,
     #[arg(value_parser = |s: &str| if s == "max" {Ok(HealthInput::Max)} else {s.parse().map(HealthInput::Amount)})]
     /// The target health
     ///
     /// Either a number or "max"
-    pub amount: HealthInput,
+    amount: HealthInput,
 }
 
 #[derive(Clone)]
-pub enum HealthInput {
+enum HealthInput {
     Max,
     Amount(u16),
 }
 
-pub fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
+fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
     let Some(mut target) = healths.iter_mut().find_map(|(id, health)| {
         if **id == event.target {
             Some(health)
@@ -85,17 +85,17 @@ pub fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) 
 }
 
 #[derive(Event, Args)]
-pub struct WeaponCommand {
+struct WeaponCommand {
     #[arg()]
     /// The id of the entity to choose
-    pub target: u64,
+    target: u64,
     #[arg()]
     /// The name of the weapon to choose
-    pub weapon: String,
+    weapon: String,
 }
 
 #[instrument(skip_all)]
-pub fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
+fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
     let Some(player) = players.iter().find_map(|(id, entity)| {
         if **id == event.target {
             Some(entity)
@@ -116,21 +116,17 @@ pub fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut comma
 }
 
 #[derive(Event, Args)]
-pub struct CharacterCommand {
+struct CharacterCommand {
     #[arg()]
     /// The id of the entity to choose
-    pub target: u64,
+    target: u64,
     #[arg()]
     /// The name of the character to choose
-    pub character: String,
+    character: String,
 }
 
 #[instrument(skip_all)]
-pub fn character(
-    event: On<CharacterCommand>,
-    players: Query<(&Id, Entity)>,
-    mut commands: Commands,
-) {
+fn character(event: On<CharacterCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
     let Some(player) = players.iter().find_map(|(id, entity)| {
         if **id == event.target {
             Some(entity)
@@ -156,23 +152,20 @@ pub fn character(
 }
 
 #[derive(Event, Args)]
-pub struct SlotCommand {
+struct SlotCommand {
     #[arg()]
     /// The id of the entity to slot
-    pub target: u64,
+    target: u64,
     #[arg()]
     /// The name of the ability to slot
-    pub ability: String,
+    ability: String,
     #[arg()]
     /// The slot to fill
-    pub slot: u8,
+    slot: u8,
 }
 
 #[instrument(skip_all)]
-pub fn slot(
-    event: On<SlotCommand>,
-    mut warriors: Query<(&Id, &mut Abilities<warrior::AbilityId>)>,
-) {
+fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Abilities<warrior::AbilityId>)>) {
     if let Some(mut abilities) = warriors.iter_mut().find_map(|(id, abilities)| {
         if **id == event.target {
             Some(abilities)
@@ -199,20 +192,20 @@ pub fn slot(
 }
 
 #[derive(Event, Args)]
-pub struct PoisonCommand {
+struct PoisonCommand {
     #[arg()]
     /// The id of the entity to poison
-    pub target: u64,
+    target: u64,
     #[arg()]
     /// The id of the source of the poison
-    pub source: u64,
+    source: u64,
     #[arg(value_parser = |s: &str| s.parse::<f32>().map(Duration::from_secs_f32))]
     /// The duration of the poison in seconds (decimals accepted)
-    pub duration: Duration,
+    duration: Duration,
 }
 
 #[instrument(skip_all)]
-pub fn poison(
+fn poison(
     cmd: On<PoisonCommand>,
     mut commands: Commands,
     entities: Query<(Entity, &Id, Option<&Cdr>)>,
@@ -246,7 +239,7 @@ pub fn poison(
         .insert(Poison::new(source, cdr, cmd.duration));
 }
 
-pub fn thread(tx: Sender<Command>) -> impl FnOnce() {
+fn thread(tx: Sender<Command>) -> impl FnOnce() {
     move || {
         std::thread::sleep(Duration::from_millis(100));
         let mut rl = DefaultEditor::new().expect("failed to create readline");
@@ -289,7 +282,7 @@ pub fn thread(tx: Sender<Command>) -> impl FnOnce() {
     }
 }
 
-pub fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
+fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
     app.add_systems(
         Update,
         move |mut commands: Commands, mut writer: MessageWriter<AppExit>| match rx.get().try_recv()
@@ -305,4 +298,18 @@ pub fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
             Err(_) => {}
         },
     );
+}
+
+pub fn plugin(app: &mut App) {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(thread(tx));
+
+    handle(SyncCell::new(rx), app);
+
+    app.add_observer(poison)
+        .add_observer(slot)
+        .add_observer(weapon)
+        .add_observer(health)
+        .add_observer(character);
 }
