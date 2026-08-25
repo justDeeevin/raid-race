@@ -20,15 +20,18 @@ use component::alive::{
     status::*,
     *,
 };
+use event::Attacked;
 use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
+    connection::direction::NetworkDirection,
     netcode::Key,
     prediction::registry::PredictionBuilderExt,
     prelude::{
-        AppComponentExt,
+        AppComponentExt, AppMessageExt,
         input::{InputRegistryExt, bei::InputPlugin},
     },
+    transport::channel::{builder::ChannelSettings, registry::AppChannelExt},
 };
 use std::{
     net::{IpAddr, Ipv4Addr},
@@ -132,8 +135,16 @@ pub fn plugin(app: &mut App) {
             .disable::<IslandSleepingPlugin>(),
     ));
 
+    app.register_message::<Attacked>()
+        .add_direction(NetworkDirection::ServerToClient)
+        .add_map_entities();
+    app.add_channel::<Channel>(ChannelSettings::default())
+        .add_direction(NetworkDirection::Bidirectional);
+
     app.add_systems(Startup, scene::test.spawn());
 }
+
+pub struct Channel;
 
 // TODO: unnecessary if/when bevyengine/bevy#25542 gets merged
 fn almost_finish_safe(timer: &mut Timer) {

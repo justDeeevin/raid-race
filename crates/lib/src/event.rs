@@ -1,14 +1,21 @@
 use bevy::{
     ecs::{
-        entity::Entity,
+        entity::{Entity, MapEntities},
         event::{EntityEvent, Event},
     },
     prelude::Deref,
 };
+use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-#[derive(EntityEvent, Deref)]
+#[derive(EntityEvent, Deref, Serialize, Deserialize, Clone)]
 pub struct Attacked(pub Entity);
+
+impl MapEntities for Attacked {
+    fn map_entities<E: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut E) {
+        self.0.map_entities(entity_mapper);
+    }
+}
 
 #[derive(Event)]
 pub struct Hit {

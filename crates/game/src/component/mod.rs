@@ -1,11 +1,13 @@
 pub mod ui;
 pub mod weapon;
 
-use bevy::ecs::component::Component;
-use raid_race_lib::component::alive::Id;
+use bevy::{
+    ecs::{component::Component, entity::Entity},
+    prelude::Deref,
+};
 
-#[derive(Component)]
-pub struct OrbitCamera(pub Id);
+#[derive(Component, Deref)]
+pub struct OrbitCamera(pub Entity);
 
 #[derive(Component)]
 pub struct AimCamera;

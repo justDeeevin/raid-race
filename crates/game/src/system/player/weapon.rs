@@ -1,34 +1,32 @@
 use crate::component::weapon::WeaponAssets;
 use bevy::{
+    app::{App, Update},
     asset::AssetServer,
-    audio::{AudioPlayer, PlaybackSettings},
     ecs::{
         lifecycle::Add,
         observer::On,
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, Single},
     },
     transform::components::Transform,
 };
-use lightyear::prelude::Controlled;
+use lightyear::prelude::MessageReceiver;
 use raid_race_lib::{
     component::alive::player::weapon::{HeldWeapon, Weapon},
     event::Attacked,
 };
-use rand::seq::IndexedRandom;
 
-pub fn load_weapon_assets(
+fn load_weapon_assets(
     event: On<Add, (Weapon, HeldWeapon)>,
     weapons: Query<&Weapon>,
     held_weapons: Query<&HeldWeapon>,
     mut commands: Commands,
     assets: Res<AssetServer>,
 ) {
-    let weapon = match weapons.get(event.entity) {
-        Ok(weapon) => weapon,
-        Err(_) => match held_weapons.get(event.entity) {
-            Ok(HeldWeapon(weapon)) => weapon,
-            Err(_) => return,
-        },
+    let Ok(weapon) = weapons
+        .get(event.entity)
+        .or_else(|_| held_weapons.get(event.entity).map(|w| &w.0))
+    else {
+        return;
     };
 
     match weapon {
@@ -40,22 +38,29 @@ pub fn load_weapon_assets(
     }
 }
 
-pub fn fire(
-    event: On<Attacked>,
+fn my_attack(event: On<Attacked>, mut commands: Commands, attackers: Query<&WeaponAssets>) {
+    if let Ok(assets) = attackers.get(**event) {
+        let sound = commands
+            .spawn((assets.sound_bundle(), Transform::default()))
+            .id();
+        commands.entity(**event).add_child(sound);
+    }
+}
+
+fn not_my_attack(
+    mut messages: Single<&mut MessageReceiver<Attacked>>,
     mut commands: Commands,
-    players: Query<(&Transform, &WeaponAssets, Option<&Controlled>)>,
+    attackers: Query<(&Transform, &WeaponAssets)>,
 ) {
-    if let Ok((transform, assets, controlled)) = players.get(**event) {
-        let sound_bundle = (
-            #[allow(clippy::unwrap_used, reason = "there's always at least one sound")]
-            AudioPlayer(assets.sounds.choose(&mut rand::rng()).unwrap().clone()),
-            PlaybackSettings::REMOVE.with_spatial(true),
-        );
-        if controlled.is_some() {
-            commands.spawn((*transform, sound_bundle));
-        } else {
-            let sound = commands.spawn(sound_bundle).id();
-            commands.entity(**event).add_child(sound);
+    for event in messages.receive() {
+        if let Ok((transform, assets)) = attackers.get(*event) {
+            commands.spawn((assets.sound_bundle(), *transform));
         }
     }
+}
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(Update, not_my_attack)
+        .add_observer(my_attack)
+        .add_observer(load_weapon_assets);
 }

@@ -20,6 +20,7 @@ fn main() {
             server::plugin,
             status::plugin,
             console::plugin,
+            player::plugin,
         ))
         .init_resource::<Ids>()
         .run();

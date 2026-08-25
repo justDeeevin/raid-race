@@ -5,7 +5,7 @@ use avian3d::physics_transform::{Position, Rotation};
 use bevy::{
     app::{App, Update},
     asset::asset_value,
-    audio::SpatialListener,
+    audio::{GlobalVolume, SpatialListener, Volume},
     color::Color,
     ecs::{
         bundle::Bundle,
@@ -18,7 +18,7 @@ use bevy::{
         query::{With, Without},
         schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::on_message},
         spawn::SpawnRelated,
-        system::{Commands, Query, Single},
+        system::{Commands, Query, ResMut, Single},
     },
     input::{
         ButtonState,
@@ -28,6 +28,7 @@ use bevy::{
     math::primitives::{Capsule3d, Cuboid},
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
+    prelude::Deref,
     scene::{EntityCommandsSceneExt, bsn},
     transform::components::Transform,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
@@ -50,6 +51,20 @@ use raid_race_lib::{
     input::{Ability, Attack, Jump, Look, Walk},
     system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
 };
+
+#[derive(Parser, ConsoleCommand, Deref)]
+#[command(name = "volume")]
+pub struct VolumeCommand {
+    #[arg()]
+    /// The linear volume—1.0=100%
+    pub value: f32,
+}
+
+fn volume(mut command: ConsoleCommand<VolumeCommand>, mut volume: ResMut<GlobalVolume>) {
+    if let Some(Ok(value)) = command.take() {
+        volume.volume = Volume::Linear(*value);
+    }
+}
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "whoami")]
@@ -177,7 +192,7 @@ macro_rules! add_bindings_on_owner_spawn {
 
 fn spawn(
     event: On<Add, Player>,
-    controlled: Query<&Id, With<Controlled>>,
+    controlled: Query<(), With<Controlled>>,
     mut commands: Commands,
     camera: Query<Entity, With<AimCamera>>,
 ) {
@@ -199,31 +214,26 @@ fn spawn(
         ))
         .insert(physics_components());
 
-    if let Ok(id) = controlled.get(event.entity) {
+    if controlled.get(event.entity).is_ok() {
+        // TODO: this should just be a resource
         commands
             .entity(camera.single().expect("multiple aim cameras"))
-            .insert((OrbitCamera(*id), SpatialListener::new(PLAYER_RADIUS as f32)));
+            .insert((
+                OrbitCamera(event.entity),
+                SpatialListener::new(-PLAYER_RADIUS as f32),
+            ));
     }
 }
 
 // FIXME: collide with walls
 fn orbit(
-    targets: Query<(&Id, &Position, &Rotation, &Pitch)>,
+    targets: Query<(&Position, &Rotation, &Pitch)>,
     cameras: Query<(&mut Transform, &OrbitCamera)>,
 ) {
     for (mut transform, OrbitCamera(target)) in cameras {
-        let target = targets
-            .iter()
-            .find_map(|(id, pos, rot, pitch)| {
-                if **id == **target {
-                    Some((pos, rot, pitch))
-                } else {
-                    None
-                }
-            })
-            .expect("orbit camera target not found");
-
-        *transform = camera_transform(target);
+        if let Ok(target) = targets.get(*target) {
+            *transform = camera_transform(target);
+        }
     }
 }
 
@@ -290,7 +300,7 @@ pub fn plugin(app: &mut App) {
             attacks: Attack,
         ],
     }))
-    .add_observer(weapon::load_weapon_assets)
-    .add_observer(weapon::fire)
-    .add_console_command::<WhoAmI, _>(whoami);
+    .add_console_command::<WhoAmI, _>(whoami)
+    .add_console_command::<VolumeCommand, _>(volume)
+    .add_plugins(weapon::plugin);
 }

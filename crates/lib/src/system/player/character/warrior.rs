@@ -28,7 +28,6 @@ abilities!(warrior {
             if let Ok((mut timer, mut character, mut cooldowns)) = params.get_mut(**event)
                 && let Character::Warrior {strike, combo_window, combo_slot, ..} = character.as_mut()
             {
-            tracing::info!("strike");
                 almost_finish_safe(&mut timer);
                 *combo_window = Some(Timer::new(COMBO_WINDOW, TimerMode::Once));
                 *strike = true;
