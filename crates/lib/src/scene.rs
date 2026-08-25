@@ -76,7 +76,7 @@ pub fn test() -> impl SceneList {
             Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH)
             Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS as f32, PLAYER_CAPSULE_LENGTH as f32)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::BLACK))
-            Position::from_xyz(0.0, (PLAYER_HEIGHT / 2.0) + 1.0, 3.0)
+            Position::from_xyz(0.0, (PLAYER_HEIGHT / 2.0) + 0.5, 3.0)
         )
     ]
 }
