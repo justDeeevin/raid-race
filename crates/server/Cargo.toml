@@ -23,6 +23,7 @@ async-h1.workspace = true
 async-net.workspace = true
 http-types.workspace = true
 serde.workspace = true
+rustyline = { version = "18.0.1", default-features = false }
 
 [lints]
 workspace = true

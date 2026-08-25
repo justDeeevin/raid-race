@@ -1,8 +1,9 @@
 use bevy::{
-    app::{App, Update},
+    app::{App, AppExit, Update},
     ecs::{
         entity::Entity,
         event::Event,
+        message::MessageWriter,
         observer::On,
         system::{Commands, Query},
     },
@@ -19,6 +20,7 @@ use raid_race_lib::{
         weapon::placeholder_gun::PlaceholderGun,
     },
 };
+use rustyline::{DefaultEditor, error::ReadlineError};
 use std::{
     sync::mpsc::{Receiver, Sender},
     time::Duration,
@@ -38,6 +40,12 @@ pub enum Command {
     Weapon(WeaponCommand),
     /// Set health
     Health(HealthCommand),
+    /// Quit
+    Quit {
+        #[arg(default_value_t)]
+        /// The exit code
+        code: u8,
+    },
 }
 
 #[derive(Event, Args)]
@@ -240,31 +248,61 @@ pub fn poison(
 
 pub fn thread(tx: Sender<Command>) -> impl FnOnce() {
     move || {
-        for line in std::io::stdin().lines().map(Result::unwrap) {
-            match Command::try_parse_from([""].into_iter().chain(line.split(' '))) {
-                Ok(cmd) => tx.send(cmd).expect("failed to send command over channel"),
-                Err(error) => match error.kind() {
-                    ErrorKind::DisplayHelp => {
-                        println!("{error}");
+        std::thread::sleep(Duration::from_millis(100));
+        let mut rl = DefaultEditor::new().expect("failed to create readline");
+
+        loop {
+            match rl.readline("$ ") {
+                Ok(line) => {
+                    if !line.trim().is_empty() {
+                        match Command::try_parse_from([""].into_iter().chain(line.split(' '))) {
+                            Ok(cmd) => tx.send(cmd).expect("failed to send command over channel"),
+                            Err(error) => match error.kind() {
+                                ErrorKind::DisplayHelp => {
+                                    println!("{error}");
+                                }
+                                _ => {
+                                    error!("{error}");
+                                }
+                            },
+                        }
                     }
-                    _ => {
+                }
+                Err(ReadlineError::Interrupted | ReadlineError::Signal(_)) => {}
+                Err(error) => {
+                    if !matches!(error, ReadlineError::Eof) {
                         error!("{error}");
                     }
-                },
+                    tx.send(Command::Quit {
+                        code: match error {
+                            ReadlineError::Io(e) => e.raw_os_error().unwrap_or(1) as u8,
+                            ReadlineError::Eof => 0,
+                            ReadlineError::Errno(e) => e as u8,
+                            _ => 1,
+                        },
+                    })
+                    .expect("failed to send quit command over channel");
+                    break;
+                }
             }
         }
     }
 }
 
 pub fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
-    app.add_systems(Update, move |mut commands: Commands| {
-        match rx.get().try_recv() {
+    app.add_systems(
+        Update,
+        move |mut commands: Commands, mut writer: MessageWriter<AppExit>| match rx.get().try_recv()
+        {
             Ok(Command::Poison(cmd)) => commands.trigger(cmd),
             Ok(Command::Slot(cmd)) => commands.trigger(cmd),
             Ok(Command::Character(cmd)) => commands.trigger(cmd),
             Ok(Command::Weapon(cmd)) => commands.trigger(cmd),
             Ok(Command::Health(cmd)) => commands.trigger(cmd),
+            Ok(Command::Quit { code }) => {
+                writer.write(AppExit::from_code(code));
+            }
             Err(_) => {}
-        }
-    });
+        },
+    );
 }
