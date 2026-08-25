@@ -18,4 +18,4 @@ pub struct Grounded;
 pub struct Pitch(pub f64);
 
 #[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
-pub struct AttackTimer(pub Timer);
+pub struct AttackCooldown(pub Timer);

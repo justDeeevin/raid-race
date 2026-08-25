@@ -4,7 +4,7 @@ pub mod weapon;
 use crate::{
     component::alive::{
         Agility, Dps, Health,
-        player::{AttackTimer, Grounded, Pitch, Player},
+        player::{AttackCooldown, Grounded, Pitch, Player},
     },
     event::{Attacked, Hit},
     input::{Attack, Jump, Look, Walk},
@@ -156,7 +156,7 @@ fn grounded(
 
 fn attack(
     event: On<Fire<Attack>>,
-    mut attack_timer: Query<&mut AttackTimer>,
+    mut attack_timer: Query<&mut AttackCooldown>,
     mut commands: Commands,
 ) {
     if let Ok(mut attack_timer) = attack_timer.get_mut(event.context)
@@ -186,8 +186,8 @@ fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>) {
     }
 }
 
-fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackTimer)>, mut health: Query<&mut Health>) {
-    let Ok((Dps(damage), AttackTimer(timer))) = damage.get(event.source) else {
+fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackCooldown)>, mut health: Query<&mut Health>) {
+    let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source) else {
         return;
     };
 
@@ -198,7 +198,7 @@ fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackTimer)>, mut health: Query<&m
     }
 }
 
-fn attack_cooldown(attack_timer: Query<&mut AttackTimer>, time: Res<Time>) {
+fn attack_cooldown(attack_timer: Query<&mut AttackCooldown>, time: Res<Time>) {
     for mut timer in attack_timer {
         timer.tick(time.delta());
     }

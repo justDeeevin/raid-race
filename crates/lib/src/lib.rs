@@ -83,7 +83,6 @@ pub fn plugin(app: &mut App) {
 
     replicate!(
         Agility,
-        AttackTimer,
         Cdr,
         Defense,
         DefenseUp,
@@ -102,6 +101,7 @@ pub fn plugin(app: &mut App) {
     );
 
     app.component::<Cooldowns>().replicate_once();
+    app.component::<AttackCooldown>().replicate_once();
     app.component::<Pitch>().predict();
 
     app.add_plugins(InputPlugin::<Player>::default())

@@ -18,7 +18,7 @@ use lightyear::{
 use raid_race_lib::{
     component::alive::{
         Agility, Cdr, Defense, Dps, Health, Luck, Mana,
-        player::{AttackTimer, Pitch, Player as PlayerComponent},
+        player::{AttackCooldown, Pitch, Player as PlayerComponent},
     },
     input::{Ability, Attack, Jump, Look, Walk},
     player::{PLAYER_HEIGHT, physics_components},
@@ -87,7 +87,7 @@ impl Player {
                     (Action::<Ability<5>>::default(), client_replicate.clone()),
                     (Action::<Attack>::default(), client_replicate.clone()),
                 ]),
-                AttackTimer(attack),
+                AttackCooldown(attack),
             ),
             physics_components(),
             self.init_pos,

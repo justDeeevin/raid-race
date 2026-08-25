@@ -1,6 +1,6 @@
 use crate::{
     almost_finish_safe,
-    component::alive::{Dps, Health, player::AttackTimer},
+    component::alive::{Dps, Health, player::AttackCooldown},
     event::{Attacked, Hit},
     player::character::{Abilities, Cooldowns},
 };
@@ -44,7 +44,7 @@ impl Warrior {
 
 abilities! {
     Strike {
-        cast: (event, mut params| Query<(&mut AttackTimer, &mut Warrior, &Abilities<AbilityId>, &mut Cooldowns)>, mut commands| Commands) {
+        cast: (event, mut params| Query<(&mut AttackCooldown, &mut Warrior, &Abilities<AbilityId>, &mut Cooldowns)>, mut commands| Commands) {
             const COMBO_WINDOW: Duration = Duration::from_secs(3);
 
             if let Ok((mut timer, mut warrior, abilities, mut cooldowns)) = params.get_mut(**event) {
@@ -63,7 +63,7 @@ abilities! {
         cooldown: Duration::from_secs(5),
     },
     StrikeCombo {
-        cast: (event, mut params| Query<(&mut AttackTimer, &mut Warrior)>, mut commands| Commands) {
+        cast: (event, mut params| Query<(&mut AttackCooldown, &mut Warrior)>, mut commands| Commands) {
             if let Ok((mut timer, mut warrior)) = params.get_mut(**event)
                 && let Some(window) = &warrior.combo_window
                 && !window.is_finished()
