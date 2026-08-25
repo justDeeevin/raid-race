@@ -38,6 +38,8 @@ bevy_winit = { version = "0.19", features = ["custom_cursor", "serialize", "wayl
 blake3 = { version = "1" }
 byteorder = { version = "1" }
 bytes = { version = "1", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+clap_builder = { version = "4", default-features = false, features = ["color", "help", "std", "suggestions", "usage"] }
 constant_time_eq = { version = "0.4", default-features = false, features = ["std"] }
 either = { version = "1", features = ["serde", "use_std"] }
 foldhash = { version = "0.2", default-features = false, features = ["std"] }

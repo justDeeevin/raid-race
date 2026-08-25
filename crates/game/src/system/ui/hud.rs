@@ -26,9 +26,12 @@ use lightyear::{
     prelude::{Controlled, input::bei::InputAction},
 };
 use raid_race_lib::{
-    component::alive::{Health, Mana, player::Player, status::Poison},
+    component::alive::{
+        Health, Mana,
+        player::{Player, character::Cooldowns},
+        status::Poison,
+    },
     input,
-    player::character::Cooldowns,
 };
 
 fn health_bar(
@@ -79,7 +82,7 @@ fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>
     }
 }
 
-fn ability_cooldown<const N: u8>(
+fn ability_cooldown<const N: usize>(
     hud: Query<(&mut Text, &Ability<N>)>,
     cd: Query<&Cooldowns, With<Controlled>>,
 ) where
@@ -87,7 +90,7 @@ fn ability_cooldown<const N: u8>(
 {
     for (mut text, Ability(target)) in hud {
         if let Ok(cooldowns) = cd.get(*target) {
-            match &cooldowns[N as usize - 1] {
+            match &cooldowns[N - 1] {
                 Either::Left(cd) => {
                     if cd.is_finished() {
                         **text = "Ready".to_string();
@@ -242,7 +245,7 @@ fn scene(target: Entity) -> impl Scene {
     }
 }
 
-fn ability<const N: u8>(target: Entity) -> impl Scene
+fn ability<const N: usize>(target: Entity) -> impl Scene
 where
     Ability<N>: Component,
 {

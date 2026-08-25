@@ -1,6 +1,6 @@
 use bevy::{asset::Handle, audio::AudioSource, ecs::component::Component};
 
 #[derive(Component)]
-pub struct PlaceholderGunAssets {
+pub struct WeaponAssets {
     pub sounds: Vec<Handle<AudioSource>>,
 }

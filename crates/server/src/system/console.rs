@@ -11,16 +11,17 @@ use bevy::{
 };
 use clap::{Args, Parser, error::ErrorKind};
 use raid_race_lib::{
-    component::alive::{Cdr, Health, Id, status::Poison},
-    player::{
-        character::{
-            Abilities, Cooldowns,
-            warrior::{self, Warrior},
+    component::alive::{
+        Cdr, Health, Id,
+        player::{
+            character::{Character, CharacterName, Cooldowns},
+            weapon::{HeldWeapon, Weapon},
         },
-        weapon::placeholder_gun::PlaceholderGun,
+        status::Poison,
     },
+    system::player::character::warrior,
 };
-use rustyline::{DefaultEditor, error::ReadlineError};
+use rustyline::{DefaultEditor, config::Configurer, error::ReadlineError};
 use std::{
     sync::mpsc::{Receiver, Sender},
     time::Duration,
@@ -67,21 +68,20 @@ enum HealthInput {
 }
 
 fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
-    let Some(mut target) = healths.iter_mut().find_map(|(id, health)| {
+    if let Some(mut target) = healths.iter_mut().find_map(|(id, health)| {
         if **id == event.target {
             Some(health)
         } else {
             None
         }
-    }) else {
+    }) {
+        target.current = match event.amount {
+            HealthInput::Amount(amount) => amount,
+            HealthInput::Max => target.cap,
+        };
+    } else {
         error!("target not found");
-        return;
-    };
-
-    target.current = match event.amount {
-        HealthInput::Amount(amount) => amount,
-        HealthInput::Max => target.cap,
-    };
+    }
 }
 
 #[derive(Event, Args)]
@@ -89,29 +89,23 @@ struct WeaponCommand {
     #[arg()]
     /// The id of the entity to choose
     target: u64,
-    #[arg()]
-    /// The name of the weapon to choose
-    weapon: String,
+    #[arg(value_enum)]
+    /// The weapon to choose
+    weapon: Weapon,
 }
 
 #[instrument(skip_all)]
 fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
-    let Some(player) = players.iter().find_map(|(id, entity)| {
+    if let Some(player) = players.iter().find_map(|(id, entity)| {
         if **id == event.target {
             Some(entity)
         } else {
             None
         }
-    }) else {
+    }) {
+        commands.entity(player).insert(HeldWeapon(event.weapon));
+    } else {
         error!("target not found");
-        return;
-    };
-
-    match event.weapon.as_str() {
-        "placeholder" => {
-            commands.entity(player).insert(PlaceholderGun);
-        }
-        _ => error!("unknown weapon"),
     }
 }
 
@@ -120,9 +114,9 @@ struct CharacterCommand {
     #[arg()]
     /// The id of the entity to choose
     target: u64,
-    #[arg()]
+    #[arg(value_enum)]
     /// The name of the character to choose
-    character: String,
+    character: CharacterName,
 }
 
 #[instrument(skip_all)]
@@ -138,16 +132,13 @@ fn character(event: On<CharacterCommand>, players: Query<(&Id, Entity)>, mut com
         return;
     };
 
-    match event.character.as_str() {
-        "warrior" => {
-            let abilities = Abilities::<warrior::AbilityId>::default();
-            commands.entity(player).insert((
-                Cooldowns::from(&abilities),
-                abilities,
-                Warrior::new(10),
-            ));
+    match event.character {
+        CharacterName::Warrior => {
+            let (character, abilities) = Character::warrior(10);
+            commands
+                .entity(player)
+                .insert((character, Cooldowns::from(&abilities)));
         }
-        _ => error!("unknown character"),
     }
 }
 
@@ -161,33 +152,40 @@ struct SlotCommand {
     ability: String,
     #[arg()]
     /// The slot to fill
-    slot: u8,
+    slot: usize,
 }
 
 #[instrument(skip_all)]
-fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Abilities<warrior::AbilityId>)>) {
-    if let Some(mut abilities) = warriors.iter_mut().find_map(|(id, abilities)| {
+fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character)>) {
+    let Some(mut character) = warriors.iter_mut().find_map(|(id, character)| {
         if **id == event.target {
-            Some(abilities)
+            Some(character)
         } else {
             None
         }
-    }) {
-        let id = match event.ability.as_str() {
-            "strike" => warrior::AbilityId::Strike,
-            "combo" => warrior::AbilityId::StrikeCombo,
-            _ => {
-                error!("unknown ability for warrior");
+    }) else {
+        error!("target not found");
+        return;
+    };
+
+    match character.as_mut() {
+        Character::Warrior {
+            abilities,
+            combo_slot,
+            ..
+        } => {
+            let Some(slot) = abilities.get_mut(event.slot - 1) else {
+                error!("invalid slot");
                 return;
+            };
+
+            if let Ok(ability) = event.ability.parse::<warrior::AbilityId>() {
+                *slot = ability;
+                if ability == warrior::AbilityId::StrikeCombo {
+                    *combo_slot = Some(event.slot);
+                }
             }
-        };
-        if let Some(ability) = abilities.get_mut(event.slot as usize - 1) {
-            *ability = id;
-        } else {
-            error!("invalid slot");
         }
-    } else {
-        error!("target not found")
     }
 }
 
@@ -243,6 +241,7 @@ fn thread(tx: Sender<Command>) -> impl FnOnce() {
     move || {
         std::thread::sleep(Duration::from_millis(100));
         let mut rl = DefaultEditor::new().expect("failed to create readline");
+        rl.set_auto_add_history(true);
 
         loop {
             match rl.readline("$ ") {

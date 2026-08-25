@@ -13,7 +13,8 @@ pub struct Jump;
 #[action_output(Vec2)]
 pub struct Look;
 
-pub struct Ability<const N: u8>;
+pub struct Ability<const N: usize>;
+pub const N_ABILITIES: usize = 5;
 
 macro_rules! impl_ability {
     ($($n:literal),* $(,)?) => {

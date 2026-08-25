@@ -1,6 +1,6 @@
 use crate::{
     component::alive::Health,
-    player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS},
+    system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS},
 };
 use avian3d::{
     collision::collider::Collider,

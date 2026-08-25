@@ -1,8 +1,8 @@
 pub mod component;
 pub mod event;
 pub mod input;
-pub mod player;
 pub mod scene;
+pub mod system;
 
 use avian3d::{
     PhysicsPlugins,
@@ -15,7 +15,11 @@ use bevy::{
     scene::SpawnListSystem,
     time::Timer,
 };
-use component::alive::{player::*, status::*, *};
+use component::alive::{
+    player::{character::*, weapon::*, *},
+    status::*,
+    *,
+};
 use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
@@ -26,7 +30,6 @@ use lightyear::{
         input::{InputRegistryExt, bei::InputPlugin},
     },
 };
-use player::{character::Cooldowns, weapon::placeholder_gun::PlaceholderGun};
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::LazyLock,
@@ -84,20 +87,22 @@ pub fn plugin(app: &mut App) {
     replicate!(
         Agility,
         Cdr,
+        Character,
         Defense,
-        DefenseUp,
+        DefenseDown,
         DefenseUp,
         Dps,
         DpsDown,
         DpsUp,
         Health,
+        HeldWeapon,
         Id,
         Luck,
         Mana,
         Pitch,
-        PlaceholderGun,
         Player,
         Poison,
+        Weapon,
     );
 
     app.component::<Cooldowns>().replicate_once();
@@ -115,7 +120,7 @@ pub fn plugin(app: &mut App) {
         .register_input_action::<Ability<4>>()
         .register_input_action::<Ability<5>>();
 
-    app.add_plugins(player::plugin);
+    app.add_plugins(system::player::plugin);
 
     app.add_plugins((
         LightyearAvianPlugin::default(),

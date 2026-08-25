@@ -1,3 +1,6 @@
+pub mod character;
+pub mod weapon;
+
 use bevy::{
     ecs::component::Component,
     prelude::{Deref, DerefMut},

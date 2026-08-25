@@ -48,7 +48,7 @@ use raid_race_lib::{
         player::{Pitch, Player},
     },
     input::{Ability, Attack, Jump, Look, Walk},
-    player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
+    system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
 };
 
 #[derive(Parser, ConsoleCommand)]
@@ -290,7 +290,7 @@ pub fn plugin(app: &mut App) {
             attacks: Attack,
         ],
     }))
-    .add_observer(weapon::placeholder_gun_assets)
-    .add_observer(weapon::placeholder_gun_fire)
+    .add_observer(weapon::load_weapon_assets)
+    .add_observer(weapon::fire)
     .add_console_command::<WhoAmI, _>(whoami);
 }

@@ -21,7 +21,7 @@ use raid_race_lib::{
         player::{AttackCooldown, Pitch, Player as PlayerComponent},
     },
     input::{Ability, Attack, Jump, Look, Walk},
-    player::{PLAYER_HEIGHT, physics_components},
+    system::player::{PLAYER_HEIGHT, physics_components},
 };
 use typed_builder::TypedBuilder;
 

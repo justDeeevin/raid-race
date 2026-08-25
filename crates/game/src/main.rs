@@ -47,22 +47,20 @@ fn main() {
 #[allow(unused)]
 fn inspector(app: &mut App) {
     fn ui(world: &mut World) {
-        let Ok(mut ctx) = world
+        if let Ok(mut ctx) = world
             .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
             .single(world)
             .cloned()
-        else {
-            return;
-        };
-
-        Window::new("World Inspector")
-            .default_size((400.0, 300.0))
-            .show(ctx.get_mut(), |ui| {
-                ScrollArea::both().show(ui, |ui| {
-                    bevy_inspector::ui_for_world(world, ui);
-                    ui.allocate_space(ui.available_size());
-                })
-            });
+        {
+            Window::new("World Inspector")
+                .default_size((400.0, 300.0))
+                .show(ctx.get_mut(), |ui| {
+                    ScrollArea::both().show(ui, |ui| {
+                        bevy_inspector::ui_for_world(world, ui);
+                        ui.allocate_space(ui.available_size());
+                    })
+                });
+        }
     }
 
     app.add_plugins(DefaultInspectorConfigPlugin)

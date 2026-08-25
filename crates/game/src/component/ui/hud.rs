@@ -24,9 +24,9 @@ impl HealthBar {
 pub struct ManaBar(pub Entity);
 
 #[derive(FromTemplate, Deref)]
-pub struct Ability<const N: u8>(pub Entity);
+pub struct Ability<const N: usize>(pub Entity);
 
-impl<const N: u8> Component for Ability<N>
+impl<const N: usize> Component for Ability<N>
 where
     input::Ability<N>: InputAction,
 {

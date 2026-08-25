@@ -4,11 +4,13 @@ pub mod weapon;
 use crate::{
     component::alive::{
         Agility, Dps, Health,
-        player::{AttackCooldown, Grounded, Pitch, Player},
+        player::{
+            AttackCooldown, Grounded, Pitch, Player,
+            character::{Character, Cooldowns},
+        },
     },
     event::{Attacked, Hit},
-    input::{Attack, Jump, Look, Walk},
-    player::character::Cooldowns,
+    input::{Ability, Attack, Jump, Look, Walk},
     scene::Dummy,
 };
 use avian3d::{
@@ -35,7 +37,10 @@ use bevy::{
     time::Time,
     transform::components::Transform,
 };
-use bevy_enhanced_input::action::events::{Fire, Start};
+use bevy_enhanced_input::action::{
+    InputAction,
+    events::{Fire, Start},
+};
 use either::Either;
 
 pub const PLAYER_RADIUS: f64 = 0.5;
@@ -55,26 +60,22 @@ fn walk(
     let Ok((mass, transform, agility, mut forces)) = params.get_mut(event.context) else {
         return;
     };
-
-    let delta_t = time.delta_secs_f64();
-
-    let max_delta_v = MAX_ACCELERATION * delta_t;
-
     let Ok(move_dir) =
         Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| transform.rotation * d)
     else {
         return;
     };
 
+    let delta_t = time.delta_secs_f64();
+    let max_delta_v = MAX_ACCELERATION * delta_t;
+
     let velocity = {
         let t = forces.linear_velocity();
         Vector::new(t.x, 0.0, t.z)
     };
-
     let target_velocity = move_dir
         .map(|d| d * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as f32)))
         .as_dvec3();
-
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
 
     let required_acceleration = (new_velocity - velocity) / delta_t;
@@ -187,11 +188,9 @@ fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>) {
 }
 
 fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackCooldown)>, mut health: Query<&mut Health>) {
-    let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source) else {
-        return;
-    };
-
-    if let Ok(mut health) = health.get_mut(event.target) {
+    if let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source)
+        && let Ok(mut health) = health.get_mut(event.target)
+    {
         health.current = health
             .current
             .saturating_sub((*damage as f32 * timer.duration().as_secs_f32()) as u16);
@@ -201,6 +200,28 @@ fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackCooldown)>, mut health: Query
 fn attack_cooldown(attack_timer: Query<&mut AttackCooldown>, time: Res<Time>) {
     for mut timer in attack_timer {
         timer.tick(time.delta());
+    }
+}
+
+fn ability<const N: usize>(
+    event: On<Start<Ability<N>>>,
+    mut characters: Query<(&Character, &mut Cooldowns)>,
+    mut commands: Commands,
+) where
+    Ability<N>: InputAction,
+{
+    if let Ok((abilities, mut cooldowns)) = characters.get_mut(event.context) {
+        match cooldowns.get_mut(N - 1) {
+            Some(Either::Left(timer)) if timer.is_finished() => {
+                timer.reset();
+                abilities.trigger::<N>(event.context, &mut commands);
+            }
+            Some(Either::Right(ready)) if *ready => {
+                *ready = false;
+                abilities.trigger::<N>(event.context, &mut commands);
+            }
+            Some(_) | None => {}
+        }
     }
 }
 
@@ -214,7 +235,12 @@ pub fn plugin(app: &mut App) {
     .add_observer(look)
     .add_observer(attack)
     .add_observer(hit)
-    .add_observer(weapon::placeholder_gun::shoot)
+    .add_observer(ability::<1>)
+    .add_observer(ability::<2>)
+    .add_observer(ability::<3>)
+    .add_observer(ability::<4>)
+    .add_observer(ability::<5>)
+    .add_observer(weapon::attack)
     .add_plugins(character::warrior::plugin);
 }
 

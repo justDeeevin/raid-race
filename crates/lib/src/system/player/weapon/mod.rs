@@ -1,7 +1,12 @@
+pub mod placeholder_gun;
+
 use crate::{
-    component::alive::player::Pitch,
+    component::alive::player::{
+        Pitch,
+        weapon::{HeldWeapon, Weapon},
+    },
     event::{Attacked, Hit},
-    player::camera_transform,
+    system::player::camera_transform,
 };
 use avian3d::{
     physics_transform::{Position, Rotation},
@@ -9,30 +14,24 @@ use avian3d::{
 };
 use bevy::{
     ecs::{
-        component::Component,
         observer::On,
-        query::With,
         system::{Commands, Query},
     },
     math::Dir3,
 };
-use serde::{Deserialize, Serialize};
 
-#[derive(Component, Serialize, Deserialize)]
-pub struct PlaceholderGun;
-
-pub fn shoot(
+pub fn attack(
     event: On<Attacked>,
     space: SpatialQuery,
-    players: Query<(&Position, &Rotation, &Pitch), With<PlaceholderGun>>,
+    players: Query<(&HeldWeapon, &Position, &Rotation, &Pitch)>,
     mut commands: Commands,
 ) {
     const MAX_DISTANCE: f64 = 200.0;
 
-    let Ok(target) = players.get(**event) else {
+    let Ok((HeldWeapon(weapon), position, rotation, pitch)) = players.get(**event) else {
         return;
     };
-    let camera = camera_transform(target);
+    let camera = camera_transform((position, rotation, pitch));
     let filter = SpatialQueryFilter::from_excluded_entities([**event]);
 
     if let Some(camera_hit) = space.cast_ray(
@@ -42,13 +41,15 @@ pub fn shoot(
         false,
         &filter,
     ) && let Ok(dir) = Dir3::new(
-        (camera.translation + (camera.forward() * camera_hit.distance as f32)) - target.0.as_vec3(),
-    ) && let Some(hit) = space.cast_ray(**target.0, dir, MAX_DISTANCE, false, &filter)
-        && hit.entity == camera_hit.entity
-    {
+        (camera.translation + (camera.forward() * camera_hit.distance as f32)) - position.as_vec3(),
+    ) && let Some(target) = match weapon {
+        Weapon::PlaceholderGun => {
+            placeholder_gun::shoot(space, **event, **position, dir, camera_hit.distance)
+        }
+    } {
         commands.trigger(Hit {
             source: **event,
-            target: hit.entity,
-        });
+            target,
+        })
     }
 }
