@@ -4,7 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy = { workspace = true, features = ["3d", "audio", "dynamic_linking", "ui"] }
+bevy = { workspace = true, features = [
+	"3d",
+	"audio",
+	"mp3",
+	"dynamic_linking",
+	"ui",
+] }
 avian3d = { workspace = true, features = ["debug-plugin"] }
 tracing = "0.1.44"
 raid-race-lib.workspace = true
@@ -18,6 +24,7 @@ futures.workspace = true
 async-net.workspace = true
 async-h1.workspace = true
 http-types.workspace = true
+rand.workspace = true
 
 # TODO: use crates.io when these get merged and released
 bevy-inspector-egui = { git = "https://github.com/kisya-games/bevy-inspector-egui", branch = "egui-0.36" }

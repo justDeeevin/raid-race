@@ -1,10 +1,12 @@
 pub mod placeholder_gun;
 
 use crate::{
-    component::alive::{Dps, Health, player::AttackTimer},
+    component::alive::{player::AttackTimer, Dps, Health},
     event::Hit,
 };
-use bevy::ecs::{observer::On, system::Query};
+use bevy::{
+    ecs::{observer::On, system::Query},
+};
 
 pub fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackTimer)>, mut health: Query<&mut Health>) {
     let Ok((Dps(damage), AttackTimer(timer))) = damage.get(event.source) else {

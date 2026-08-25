@@ -10,7 +10,7 @@ use bevy::{
 use raid_race_lib::component::alive::Id;
 
 fn main() {
-    App::new()
+    App::default()
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: None,

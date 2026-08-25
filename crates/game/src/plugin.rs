@@ -1,6 +1,6 @@
 use crate::system::{
     client::{self, AuthCommand, AuthServer, ConnectCommand, DisconnectCommand, TokenTask},
-    player::{self, WhoAmI, add_bindings_on_owner_spawn},
+    player::{self, WhoAmI, add_bindings_on_owner_spawn, weapon},
     ui::hud,
 };
 use bevy::{
@@ -97,6 +97,8 @@ pub fn player(app: &mut App) {
             attacks: Attack,
         ],
     }))
+    .add_observer(weapon::placeholder_gun_assets)
+    .add_observer(weapon::placeholder_gun_fire)
     .add_console_command::<WhoAmI, _>(player::whoami);
 }
 

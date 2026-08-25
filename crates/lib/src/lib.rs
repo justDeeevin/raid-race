@@ -71,7 +71,7 @@ pub const PRIVATE_KEY: Key = {
 
 pub static TOTP: LazyLock<Totp> = LazyLock::new(|| {
     #[allow(clippy::unwrap_used, reason = "should never fail")]
-    Builder::new().with_secret(PRIVATE_KEY).build().unwrap()
+    Builder::default().with_secret(PRIVATE_KEY).build().unwrap()
 });
 
 pub fn plugin(app: &mut App) {

@@ -9,7 +9,7 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/{server}", get(auth));
+    let app = Router::default().route("/{server}", get(auth));
     let socket = TcpListener::bind(SocketAddr::new(SERVER_ADDR, AUTH_PORT))
         .await
         .expect("failed to bind to socket");

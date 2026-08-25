@@ -12,9 +12,10 @@ use bevy::{
     transform::components::Transform,
 };
 use bevy_console::ConsolePlugin;
+use component::AimCamera;
 
 fn main() {
-    App::new()
+    App::default()
         .add_plugins((
             DefaultPlugins.set(LogPlugin {
                 custom_layer: bevy_console::make_layer,
@@ -31,6 +32,7 @@ fn main() {
             commands.spawn((
                 Camera3d::default(),
                 Transform::from_xyz(0.0, 100.0, 100.0).looking_at(Vec3::ZERO, Dir3::Y),
+                AimCamera,
             ));
         })
         .run();

@@ -1,8 +1,10 @@
-use crate::component::OrbitCamera;
+pub mod weapon;
+
+use crate::component::{AimCamera, OrbitCamera};
 use avian3d::physics_transform::{Position, Rotation};
 use bevy::{
     asset::asset_value,
-    camera::Camera3d,
+    audio::SpatialListener,
     color::Color,
     ecs::{
         bundle::Bundle,
@@ -177,7 +179,7 @@ pub fn spawn(
     event: On<Add, Player>,
     controlled: Query<&Id, With<Controlled>>,
     mut commands: Commands,
-    camera: Query<Entity, With<Camera3d>>,
+    camera: Query<Entity, With<AimCamera>>,
 ) {
     commands
         .entity(event.entity)
@@ -199,11 +201,12 @@ pub fn spawn(
 
     if let Ok(id) = controlled.get(event.entity) {
         commands
-            .entity(camera.single().expect("multiple cameras"))
-            .insert(OrbitCamera(*id));
+            .entity(camera.single().expect("multiple aim cameras"))
+            .insert((OrbitCamera(*id), SpatialListener::new(PLAYER_RADIUS as f32)));
     }
 }
 
+// FIXME: collide with walls
 pub fn orbit(
     targets: Query<(&Id, &Position, &Rotation, &Pitch)>,
     cameras: Query<(&mut Transform, &OrbitCamera)>,

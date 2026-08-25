@@ -16,7 +16,7 @@ lightyear = { workspace = true, features = [
 ] }
 async-channel = "2.5.0"
 async-lock = "3.4.2"
-rand = "0.10.2"
+rand.workspace = true
 wtransport = "0.6.1"
 clap = { version = "4.6.6", features = ["derive"] }
 async-h1.workspace = true

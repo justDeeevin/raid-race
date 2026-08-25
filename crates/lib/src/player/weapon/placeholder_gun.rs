@@ -1,3 +1,8 @@
+use crate::{
+    component::alive::player::Pitch,
+    event::{Attacked, Hit},
+    player::camera_transform,
+};
 use avian3d::{
     physics_transform::{Position, Rotation},
     spatial_query::{SpatialQuery, SpatialQueryFilter},
@@ -12,12 +17,6 @@ use bevy::{
     math::Dir3,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{
-    component::alive::player::Pitch,
-    event::{Attacked, Hit},
-    player::camera_transform,
-};
 
 #[derive(Component, Serialize, Deserialize)]
 pub struct PlaceholderGun;
@@ -35,8 +34,6 @@ pub fn shoot(
     };
     let camera = camera_transform(target);
     let filter = SpatialQueryFilter::from_excluded_entities([**event]);
-
-    tracing::info!("bang!");
 
     if let Some(camera_hit) = space.cast_ray(
         camera.translation.as_dvec3(),

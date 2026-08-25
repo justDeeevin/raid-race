@@ -17,8 +17,9 @@ publish = false
 [dependencies]
 aeronet_webtransport = { version = "0.21", features = ["client", "server"] }
 anyhow = { version = "1" }
+arrayvec = { version = "0.7" }
 avian3d = { version = "0.7", default-features = false, features = ["3d", "debug-plugin", "parallel", "parry-f64", "serialize", "xpbd_joints"] }
-bevy = { version = "0.19", default-features = false, features = ["3d", "audio", "debug", "dynamic_linking", "keyboard", "mouse", "serialize", "touch", "ui"] }
+bevy = { version = "0.19", default-features = false, features = ["3d", "audio", "debug", "dynamic_linking", "keyboard", "mouse", "mp3", "serialize", "touch", "ui"] }
 bevy_app = { version = "0.19", features = ["reflect_auto_register"] }
 bevy_core_pipeline = { version = "0.19", default-features = false, features = ["tonemapping_luts", "webgl"] }
 bevy_diagnostic = { version = "0.19", features = ["dynamic_linking", "sysinfo_plugin"] }
@@ -26,7 +27,7 @@ bevy_ecs = { version = "0.19", features = ["debug", "multi_threaded", "reflect_a
 bevy_enhanced_input = { version = "0.26", features = ["serialize"] }
 bevy_image = { version = "0.19", features = ["hdr", "ktx2", "png", "serialize", "zstd_rust"] }
 bevy_input = { version = "0.19", features = ["gamepad", "gestures", "keyboard", "mouse", "serialize", "touch"] }
-bevy_internal = { version = "0.19", default-features = false, features = ["async_executor", "bevy_anti_alias", "bevy_clipboard", "bevy_gilrs", "bevy_gizmos_render", "bevy_gltf", "bevy_input_focus", "bevy_log", "bevy_mikktspace", "bevy_pbr", "bevy_post_process", "bevy_scene", "bevy_state", "bevy_ui_render", "bevy_ui_widgets", "custom_cursor", "debug", "default_font", "dynamic_linking", "gamepad", "gltf_animation", "hdr", "keyboard", "mesh_picking", "morph_animation", "mouse", "multi_threaded", "png", "reflect_auto_register", "serialize", "smaa_luts", "sprite_picking", "sysinfo_plugin", "tonemapping_luts", "touch", "ui_picking", "vorbis", "wayland", "webgl", "x11", "zstd_rust"] }
+bevy_internal = { version = "0.19", default-features = false, features = ["async_executor", "bevy_anti_alias", "bevy_clipboard", "bevy_gilrs", "bevy_gizmos_render", "bevy_gltf", "bevy_input_focus", "bevy_log", "bevy_mikktspace", "bevy_pbr", "bevy_post_process", "bevy_scene", "bevy_state", "bevy_ui_render", "bevy_ui_widgets", "custom_cursor", "debug", "default_font", "dynamic_linking", "gamepad", "gltf_animation", "hdr", "keyboard", "mesh_picking", "morph_animation", "mouse", "mp3", "multi_threaded", "png", "reflect_auto_register", "serialize", "smaa_luts", "sprite_picking", "sysinfo_plugin", "tonemapping_luts", "touch", "ui_picking", "vorbis", "wayland", "webgl", "x11", "zstd_rust"] }
 bevy_light = { version = "0.19", features = ["bevy_gizmos", "webgl"] }
 bevy_pbr = { version = "0.19", default-features = false, features = ["bevy_gltf", "webgl"] }
 bevy_reflect = { version = "0.19", features = ["glam", "petgraph", "reflect_documentation", "smol_str", "uuid", "wgpu-types"] }
