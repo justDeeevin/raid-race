@@ -124,7 +124,7 @@ fn spin(
     space: SpatialQuery,
     time: Res<Time>,
 ) {
-    const AOE_RADIUS: Meters = 1.0;
+    const AOE_RADIUS: Meters = 3.0;
     const AOE_HEIGHT: Meters = PLAYER_HEIGHT;
     const DAMAGE_MULTIPLIER: f32 = 2.0;
 

@@ -29,7 +29,7 @@ pub const PLAYER_HEIGHT: Meters = 1.75;
 // -- DON'T CHANGE --
 pub const PLAYER_CAPSULE_LENGTH: Meters = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
 // ------------------
-pub const PLAYER_RADIUS: Meters = PLAYER_HEIGHT / 4.0;
+pub const PLAYER_RADIUS: Meters = PLAYER_HEIGHT / 8.0;
 
 fn walk(
     event: On<Fire<Walk>>,
