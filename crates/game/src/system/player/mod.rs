@@ -15,7 +15,7 @@ use bevy::{
         lifecycle::{Add, Insert},
         message::MessageReader,
         observer::On,
-        query::{With, Without},
+        query::{Changed, With, Without},
         schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::on_message},
         spawn::SpawnRelated,
         system::{Commands, Query, ResMut, Single},
@@ -25,13 +25,16 @@ use bevy::{
         keyboard::{KeyCode, KeyboardInput},
         mouse::{MouseButton, MouseButtonInput},
     },
-    math::primitives::{Capsule3d, Cuboid},
+    math::{
+        Vec2,
+        primitives::{Capsule3d, Cuboid},
+    },
     mesh::Mesh3d,
     pbr::{MeshMaterial3d, StandardMaterial},
     prelude::Deref,
     scene::{EntityCommandsSceneExt, bsn},
     transform::components::Transform,
-    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow, Window},
 };
 use bevy_console::{
     AddConsoleCommand, ConsoleCommand,
@@ -241,28 +244,32 @@ fn grabber(
     mut button: MessageReader<MouseButtonInput>,
     mut key: MessageReader<KeyboardInput>,
     player: Single<(Entity, &ContextActivity<Player>), (With<Player>, With<Controlled>)>,
-    mut options: Query<&mut CursorOptions, With<PrimaryWindow>>,
+    mut options: Single<&mut CursorOptions, With<PrimaryWindow>>,
     mut commands: Commands,
 ) {
     #[allow(clippy::unwrap_used, reason = "there's always only one primary window")]
-    let mut options = options.single_mut().unwrap();
+    let keys = key.read().collect::<Vec<_>>();
     let (entity, looking) = *player;
-    let click = button
+    let enter = button
         .read()
-        .any(|b| b.button == MouseButton::Left && b.state == ButtonState::Released);
-    let esc = key
-        .read()
-        .any(|k| k.key_code == KeyCode::Escape && k.state == ButtonState::Pressed);
+        .any(|b| b.button == MouseButton::Left && b.state == ButtonState::Released)
+        || keys
+            .iter()
+            .any(|k| k.key_code == KeyCode::Tab && k.state == ButtonState::Released);
+    let exit = keys.iter().any(|k| {
+        (k.key_code == KeyCode::Escape && k.state == ButtonState::Pressed)
+            || (k.key_code == KeyCode::Tab && k.state == ButtonState::Pressed)
+    });
 
-    if click && esc {
+    if enter && exit {
         return;
     }
 
-    if click && !**looking {
+    if enter && !**looking {
         commands.entity(entity).insert(looking.toggled());
         options.visible = false;
         options.grab_mode = CursorGrabMode::Locked;
-    } else if esc && **looking {
+    } else if exit && **looking {
         commands.entity(entity).insert(looking.toggled());
         options.visible = true;
         options.grab_mode = CursorGrabMode::None;
