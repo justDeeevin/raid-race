@@ -8,6 +8,7 @@ use avian3d::{
     PhysicsPlugins,
     dynamics::solver::islands::{IslandPlugin, IslandSleepingPlugin},
     interpolation::PhysicsInterpolationPlugin,
+    math::Scalar,
     physics_transform::PhysicsTransformPlugin,
 };
 use bevy::{
@@ -38,6 +39,8 @@ use std::{
     time::Duration,
 };
 use totp_rs::{Builder, Totp};
+
+pub type Meters = Scalar;
 
 pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
 pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);

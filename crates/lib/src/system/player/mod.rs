@@ -2,6 +2,7 @@ pub mod character;
 pub mod weapon;
 
 use crate::{
+    Meters,
     component::alive::{
         Agility, Dps, Health,
         player::{
@@ -20,7 +21,7 @@ use avian3d::{
         forces::{Forces, ReadRigidBodyForces, WriteRigidBodyForces},
         mass_properties::components::ComputedMass,
     },
-    math::Vector,
+    math::{Quaternion, Vector},
     physics_transform::{Position, Rotation},
     spatial_query::{RayCaster, RayHits},
 };
@@ -33,7 +34,7 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res},
     },
-    math::{DQuat, Dir3, EulerRot, Quat, Vec3},
+    math::{Dir3, EulerRot, Quat, Vec3},
     time::Time,
     transform::components::Transform,
 };
@@ -43,11 +44,11 @@ use bevy_enhanced_input::action::{
 };
 use either::Either;
 
-pub const PLAYER_RADIUS: f64 = 0.5;
-pub const PLAYER_HEIGHT: f64 = 2.0;
+pub const PLAYER_HEIGHT: Meters = 1.75;
 // -- DON'T CHANGE --
-pub const PLAYER_CAPSULE_LENGTH: f64 = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
-// -------------------
+pub const PLAYER_CAPSULE_LENGTH: Meters = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
+// ------------------
+pub const PLAYER_RADIUS: Meters = PLAYER_HEIGHT / 4.0;
 
 fn walk(
     event: On<Fire<Walk>>,
@@ -105,7 +106,7 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
     **pitch = (**pitch + (delta.y as f64 * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
 
     let (yaw, pitch, roll) = rotation.to_euler(EulerRot::YXZ);
-    **rotation = DQuat::from_euler(
+    **rotation = Quaternion::from_euler(
         EulerRot::YXZ,
         yaw + (delta.x as f64 * YAW_SENS),
         pitch,
@@ -114,8 +115,8 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
 }
 
 pub fn camera_transform(target: (&Position, &Rotation, &Pitch)) -> Transform {
-    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, 1.0, 0.0);
-    const CAMERA_DISTANCE: f32 = 5.0;
+    const CAMERA_OFFSET: Vec3 = Vec3::new(1.0, PLAYER_HEIGHT as f32 / 2.0, 0.0);
+    const CAMERA_DISTANCE: Meters = 5.0;
 
     let (position, rotation, pitch) = target;
     let mut out = Transform::default();
@@ -126,8 +127,8 @@ pub fn camera_transform(target: (&Position, &Rotation, &Pitch)) -> Transform {
         **pitch as f32,
         out.rotation.to_euler(EulerRot::YXZ).2,
     );
-    out.translation =
-        position.as_vec3() - (out.forward() * CAMERA_DISTANCE) + (out.rotation * CAMERA_OFFSET);
+    out.translation = position.as_vec3() - (out.forward() * CAMERA_DISTANCE as f32)
+        + (out.rotation * CAMERA_OFFSET);
 
     out
 }
@@ -138,7 +139,7 @@ fn grounded(
     mut commands: Commands,
 ) {
     const MIN_ANGLE: f64 = 30_f64.to_radians();
-    const MAX_DISTANCE: f64 = 0.1;
+    const MAX_DISTANCE: Meters = 0.1;
 
     let sin = MIN_ANGLE.sin();
 
