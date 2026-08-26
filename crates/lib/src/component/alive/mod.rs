@@ -1,10 +1,7 @@
 pub mod player;
 pub mod status;
 
-use bevy::{
-    ecs::component::Component,
-    prelude::{Deref, DerefMut},
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Serialize, Deserialize, Deref, Clone, Copy)]

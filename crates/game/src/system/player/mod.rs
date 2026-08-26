@@ -3,38 +3,10 @@ pub mod weapon;
 use crate::component::{AimCamera, OrbitCamera};
 use avian3d::physics_transform::{Position, Rotation};
 use bevy::{
-    app::{App, Update},
-    asset::asset_value,
-    audio::{GlobalVolume, SpatialListener, Volume},
-    color::Color,
-    ecs::{
-        bundle::Bundle,
-        component::Component,
-        entity::Entity,
-        hierarchy::Children,
-        lifecycle::{Add, Insert},
-        message::MessageReader,
-        observer::On,
-        query::{Changed, With, Without},
-        schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::on_message},
-        spawn::SpawnRelated,
-        system::{Commands, Query, ResMut, Single},
-    },
-    input::{
-        ButtonState,
-        keyboard::{KeyCode, KeyboardInput},
-        mouse::{MouseButton, MouseButtonInput},
-    },
-    math::{
-        Vec2,
-        primitives::{Capsule3d, Cuboid},
-    },
-    mesh::Mesh3d,
-    pbr::{MeshMaterial3d, StandardMaterial},
-    prelude::Deref,
-    scene::{EntityCommandsSceneExt, bsn},
-    transform::components::Transform,
-    window::{CursorGrabMode, CursorOptions, PrimaryWindow, Window},
+    audio::Volume,
+    input::{ButtonState, keyboard::KeyboardInput, mouse::MouseButtonInput},
+    prelude::*,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_console::{
     AddConsoleCommand, ConsoleCommand,

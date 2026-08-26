@@ -15,29 +15,10 @@ use crate::{
     scene::Dummy,
 };
 use avian3d::{
-    collision::collider::Collider,
-    dynamics::rigid_body::{
-        LinearVelocity, LockedAxes, RigidBody,
-        forces::{Forces, ReadRigidBodyForces, WriteRigidBodyForces},
-        mass_properties::components::ComputedMass,
-    },
     math::{Quaternion, Vector},
-    physics_transform::{Position, Rotation},
-    spatial_query::{RayCaster, RayHits},
+    prelude::*,
 };
-use bevy::{
-    app::{App, FixedUpdate},
-    ecs::{
-        bundle::Bundle,
-        entity::Entity,
-        observer::On,
-        query::With,
-        system::{Commands, Query, Res},
-    },
-    math::{Dir3, EulerRot, Quat, Vec3},
-    time::Time,
-    transform::components::Transform,
-};
+use bevy::prelude::*;
 use bevy_enhanced_input::action::{
     InputAction,
     events::{Fire, Start},

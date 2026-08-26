@@ -1,10 +1,7 @@
 pub mod ui;
 pub mod weapon;
 
-use bevy::{
-    ecs::{component::Component, entity::Entity},
-    prelude::Deref,
-};
+use bevy::prelude::*;
 
 #[derive(Component, Deref)]
 pub struct OrbitCamera(pub Entity);

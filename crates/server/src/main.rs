@@ -1,11 +1,6 @@
 mod system;
 
-use bevy::{
-    DefaultPlugins,
-    app::{App, PluginGroup},
-    ecs::resource::Resource,
-    window::{ExitCondition, WindowPlugin},
-};
+use bevy::{prelude::*, window::ExitCondition};
 use raid_race_lib::component::alive::Id;
 use system::*;
 

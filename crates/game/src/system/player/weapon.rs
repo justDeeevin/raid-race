@@ -1,14 +1,5 @@
 use crate::component::weapon::WeaponAssets;
-use bevy::{
-    app::{App, Update},
-    asset::AssetServer,
-    ecs::{
-        lifecycle::Add,
-        observer::On,
-        system::{Commands, Query, Res, Single},
-    },
-    transform::components::Transform,
-};
+use bevy::prelude::*;
 use lightyear::prelude::MessageReceiver;
 use raid_race_lib::{
     component::alive::player::weapon::{HeldWeapon, Weapon},

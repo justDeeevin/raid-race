@@ -9,17 +9,8 @@ use crate::{
     event::{Attacked, Hit},
     system::player::camera_transform,
 };
-use avian3d::{
-    physics_transform::{Position, Rotation},
-    spatial_query::{SpatialQuery, SpatialQueryFilter},
-};
-use bevy::{
-    ecs::{
-        observer::On,
-        system::{Commands, Query},
-    },
-    math::Dir3,
-};
+use avian3d::prelude::*;
+use bevy::prelude::*;
 
 pub fn attack(
     event: On<Attacked>,

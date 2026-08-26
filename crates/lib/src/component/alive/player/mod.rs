@@ -1,12 +1,7 @@
 pub mod character;
 pub mod weapon;
 
-use bevy::{
-    ecs::component::Component,
-    prelude::{Deref, DerefMut},
-    reflect::Reflect,
-    time::Timer,
-};
+use bevy::prelude::*;
 use lightyear::core::id::PeerId;
 use serde::{Deserialize, Serialize};
 

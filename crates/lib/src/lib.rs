@@ -4,13 +4,7 @@ pub mod input;
 pub mod scene;
 pub mod system;
 
-use avian3d::{
-    PhysicsPlugins,
-    dynamics::solver::islands::{IslandPlugin, IslandSleepingPlugin},
-    interpolation::PhysicsInterpolationPlugin,
-    math::Scalar,
-    physics_transform::PhysicsTransformPlugin,
-};
+use avian3d::{math::Scalar, prelude::*};
 use bevy::{
     app::{App, PluginGroup, Startup},
     scene::SpawnListSystem,
@@ -24,14 +18,11 @@ use event::Attacked;
 use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
-    connection::direction::NetworkDirection,
     netcode::Key,
-    prediction::registry::PredictionBuilderExt,
     prelude::{
-        AppComponentExt, AppMessageExt,
         input::{InputRegistryExt, bei::InputPlugin},
+        *,
     },
-    transport::channel::{builder::ChannelSettings, registry::AppChannelExt},
 };
 use std::{
     net::{IpAddr, Ipv4Addr},

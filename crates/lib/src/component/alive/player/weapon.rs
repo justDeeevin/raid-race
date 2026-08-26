@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::component::Component,
-    prelude::{Deref, DerefMut},
-};
+use bevy::prelude::*;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 

@@ -1,8 +1,4 @@
-use bevy::{
-    asset::Handle,
-    audio::{AudioPlayer, AudioSource, PlaybackSettings},
-    ecs::{bundle::Bundle, component::Component},
-};
+use bevy::prelude::*;
 use rand::seq::IndexedRandom;
 
 #[derive(Component)]

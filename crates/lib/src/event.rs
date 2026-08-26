@@ -1,10 +1,4 @@
-use bevy::{
-    ecs::{
-        entity::{Entity, MapEntities},
-        event::{EntityEvent, Event},
-    },
-    prelude::Deref,
-};
+use bevy::{ecs::entity::MapEntities, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 

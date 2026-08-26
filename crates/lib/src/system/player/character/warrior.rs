@@ -10,21 +10,8 @@ use crate::{
     event::{Attacked, Hit},
     system::player::PLAYER_HEIGHT,
 };
-use avian3d::{
-    collision::collider::Collider,
-    math::Quaternion,
-    physics_transform::Position,
-    spatial_query::{SpatialQuery, SpatialQueryFilter},
-};
-use bevy::{
-    app::{App, FixedUpdate},
-    ecs::{
-        entity::Entity,
-        observer::On,
-        system::{Commands, Query, Res},
-    },
-    time::{Time, Timer, TimerMode},
-};
+use avian3d::{math::Quaternion, prelude::*};
+use bevy::prelude::*;
 use either::Either;
 use std::time::Duration;
 

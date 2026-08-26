@@ -1,12 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::{Component, Mutable},
-        entity::Entity,
-        system::{Commands, Query, Res},
-    },
-    time::Time,
-};
+use bevy::{ecs::component::Mutable, prelude::*};
 use raid_race_lib::component::alive::{
     Dps, Health,
     status::{DefenseDown, DefenseUp, DpsDown, DpsUp, Poison, StackableStatusEffect},

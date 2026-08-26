@@ -1,14 +1,4 @@
-use bevy::{
-    app::{App, AppExit, Update},
-    ecs::{
-        entity::Entity,
-        event::Event,
-        message::MessageWriter,
-        observer::On,
-        system::{Commands, Query},
-    },
-    platform::cell::SyncCell,
-};
+use bevy::{platform::cell::SyncCell, prelude::*};
 use clap::{Args, Parser, error::ErrorKind};
 use raid_race_lib::{
     component::alive::{

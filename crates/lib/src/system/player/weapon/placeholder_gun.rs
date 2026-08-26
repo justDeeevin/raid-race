@@ -1,8 +1,5 @@
-use avian3d::{
-    math::Vector,
-    spatial_query::{SpatialQuery, SpatialQueryFilter},
-};
-use bevy::{ecs::entity::Entity, math::Dir3};
+use avian3d::{math::Vector, prelude::*};
+use bevy::prelude::*;
 
 use crate::Meters;
 

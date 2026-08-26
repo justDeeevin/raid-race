@@ -1,11 +1,6 @@
 use bevy::{
-    color::Color,
-    ecs::{
-        component::{Component, Immutable, StorageType},
-        entity::Entity,
-        template::FromTemplate,
-    },
-    prelude::Deref,
+    ecs::component::{Immutable, StorageType},
+    prelude::*,
 };
 use lightyear::prelude::input::bei::InputAction;
 use raid_race_lib::input;

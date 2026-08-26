@@ -2,22 +2,8 @@ use crate::{
     component::alive::Health,
     system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS},
 };
-use avian3d::{
-    collision::collider::Collider,
-    dynamics::rigid_body::{Friction, RigidBody},
-    physics_transform::Position,
-};
-use bevy::{
-    asset::asset_value,
-    color::Color,
-    ecs::{component::Component, template::FromTemplate},
-    light::PointLight,
-    math::primitives::{Capsule3d, Cuboid},
-    mesh::Mesh3d,
-    pbr::{MeshMaterial3d, StandardMaterial},
-    scene::{SceneList, bsn_list, template_value},
-    transform::components::Transform,
-};
+use avian3d::prelude::*;
+use bevy::prelude::*;
 
 #[derive(Component, FromTemplate)]
 pub struct Dummy;
