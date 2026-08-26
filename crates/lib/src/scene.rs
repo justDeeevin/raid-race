@@ -72,7 +72,7 @@ pub fn test() -> impl SceneList {
         ),
         (
             Dummy
-            Health::new(100)
+            Health::new(u16::MAX)
             Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH)
             Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS as f32, PLAYER_CAPSULE_LENGTH as f32)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::BLACK))

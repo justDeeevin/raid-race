@@ -173,8 +173,8 @@ fn dummy(health: Query<&mut Health, With<Dummy>>) {
     for mut health in health {
         if health.current < health.cap {
             tracing::info!(damage = health.cap - health.current, "dummy hit");
+            health.current = health.cap;
         }
-        health.current = health.cap;
     }
 }
 
