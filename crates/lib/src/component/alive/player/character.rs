@@ -22,6 +22,7 @@ pub enum Character {
         combo_slot: Option<usize>,
         strike: bool,
         combo: u8,
+        spin_timer: Option<(usize, Timer)>,
     },
 }
 
@@ -38,7 +39,7 @@ impl Character {
         let abilities = [
             AbilityId::Strike,
             AbilityId::StrikeCombo,
-            AbilityId::Strike,
+            AbilityId::Spin,
             AbilityId::Strike,
             AbilityId::Strike,
         ];
@@ -51,6 +52,7 @@ impl Character {
                 combo_slot: Some(2),
                 strike: false,
                 combo: 0,
+                spin_timer: None,
             },
             abilities,
         )
@@ -65,7 +67,7 @@ impl<T: AbilityId> From<&Abilities<T>> for Cooldowns {
         Self(std::array::from_fn(|i| {
             value[i].cooldown().map_left(|d| {
                 let mut out = Timer::new(d, TimerMode::Once);
-                out.almost_finish();
+                out.finish();
                 out
             })
         }))

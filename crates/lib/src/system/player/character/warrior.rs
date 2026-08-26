@@ -1,5 +1,4 @@
 use crate::{
-    almost_finish_safe,
     component::alive::{
         Dps, Health,
         player::{
@@ -8,10 +7,18 @@ use crate::{
         },
     },
     event::{Attacked, Hit},
+    system::player::PLAYER_HEIGHT,
+};
+use avian3d::{
+    collision::collider::Collider,
+    math::Quaternion,
+    physics_transform::Position,
+    spatial_query::{SpatialQuery, SpatialQueryFilter},
 };
 use bevy::{
     app::{App, FixedUpdate},
     ecs::{
+        entity::Entity,
         observer::On,
         system::{Commands, Query, Res},
     },
@@ -28,7 +35,7 @@ abilities!(warrior {
             if let Ok((mut timer, mut character, mut cooldowns)) = params.get_mut(**event)
                 && let Character::Warrior {strike, combo_window, combo_slot, ..} = character.as_mut()
             {
-                almost_finish_safe(&mut timer);
+                timer.finish();
                 *combo_window = Some(Timer::new(COMBO_WINDOW, TimerMode::Once));
                 *strike = true;
                 commands.trigger(Attacked(**event));
@@ -49,13 +56,25 @@ abilities!(warrior {
                 && let Some(window) = &combo_window
                 && !window.is_finished()
             {
-                almost_finish_safe(&mut timer);
+                timer.finish();
                 *combo_window = None;
                 *combo = 2;
                 commands.trigger(Attacked(**event));
             }
         },
         ready: false,
+    },
+    Spin {
+        cast: (event, mut characters| Query<&mut Character>) {
+            const SPIN_DURATION: Duration = Duration::from_secs(1);
+
+            if let Ok(mut character) = characters.get_mut(**event) && let Character::Warrior {spin_timer, ..} = character.as_mut() {
+                let mut timer = Timer::new(SPIN_DURATION / 5, TimerMode::Repeating);
+                timer.finish();
+                *spin_timer = Some((0, timer));
+            }
+        },
+        cooldown: Duration::from_secs(10),
     },
 });
 
@@ -86,9 +105,7 @@ fn strike_bonus(
 
         if *combo > 0 {
             *combo -= 1;
-            if *combo > 0 {
-                commands.trigger(Attacked(event.source));
-            }
+            commands.trigger(Attacked(event.source));
         }
     }
 }
@@ -113,8 +130,50 @@ fn combo_window(warriors: Query<(&mut Character, &mut Cooldowns)>, time: Res<Tim
     }
 }
 
+fn spin(
+    characters: Query<(Entity, &mut Character, &Position, &Dps)>,
+    mut healths: Query<&mut Health>,
+    space: SpatialQuery,
+    time: Res<Time>,
+) {
+    const AOE_RADIUS: f64 = 1.0;
+    const AOE_HEIGHT: f64 = PLAYER_HEIGHT;
+    const DAMAGE_MULTIPLIER: f32 = 2.0;
+
+    for (entity, mut character, position, dps) in characters {
+        let Character::Warrior { spin_timer, .. } = character.as_mut() else {
+            continue;
+        };
+
+        if let Some((n, timer)) = spin_timer {
+            if timer.just_finished() {
+                *n += 1;
+                for hit in space.shape_intersections(
+                    &Collider::cylinder(AOE_RADIUS, AOE_HEIGHT),
+                    **position,
+                    Quaternion::default(),
+                    &SpatialQueryFilter::from_excluded_entities([entity]),
+                ) {
+                    if let Ok(mut health) = healths.get_mut(hit) {
+                        health.current = health.current.saturating_sub(
+                            (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER)
+                                as u16,
+                        );
+                    }
+                }
+            }
+
+            timer.tick(time.delta());
+        }
+
+        if spin_timer.as_ref().is_some_and(|(n, _)| *n >= 5) {
+            *spin_timer = None;
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     add_ability_systems(app);
-    app.add_systems(FixedUpdate, combo_window)
+    app.add_systems(FixedUpdate, (combo_window, spin))
         .add_observer(strike_bonus);
 }
