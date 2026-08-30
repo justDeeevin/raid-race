@@ -1,10 +1,3 @@
-#[cfg(feature = "server")]
-use super::Defense;
-#[cfg(feature = "server")]
-use bevy::ecs::{component::Mutable, lifecycle::HookContext, world::DeferredWorld};
-#[cfg(feature = "server")]
-use std::ops::{AddAssign, DerefMut, SubAssign};
-
 use super::{Cdr, Dps};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -40,18 +33,19 @@ impl Poison {
 }
 
 #[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
-#[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DefenseUp(pub StackableStatusEffect);
 #[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
-#[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DefenseDown(pub StackableStatusEffect);
 
 #[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
-#[cfg_attr(feature = "server", component(on_add = on_add::<false, Self, Defense>, on_remove = on_remove::<false, Self, Defense>))]
 pub struct DpsUp(pub StackableStatusEffect);
 #[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
-#[cfg_attr(feature = "server", component(on_add = on_add::<true, Self, Defense>, on_remove = on_remove::<true, Self, Defense>))]
 pub struct DpsDown(pub StackableStatusEffect);
+
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
+pub struct AgilityUp(pub StackableStatusEffect);
+#[derive(Component, Deref, DerefMut, Serialize, Deserialize)]
+pub struct AgilityDown(pub StackableStatusEffect);
 
 #[derive(Component)]
 pub struct Blind(pub Timer);
@@ -68,61 +62,5 @@ impl StackableStatusEffect {
             stacks,
             timer: Timer::new(duration, TimerMode::Once),
         }
-    }
-}
-
-#[cfg(feature = "server")]
-fn on_add<
-    const DEBUFF: bool,
-    T: Component + std::ops::Deref<Target = StackableStatusEffect>,
-    Target: Component<Mutability = Mutable> + DerefMut,
->(
-    mut world: DeferredWorld,
-    context: HookContext,
-) where
-    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
-{
-    #[allow(
-        clippy::unwrap_used,
-        reason = "on_add is always called after T is added"
-    )]
-    let delta = world.get::<T>(context.entity).unwrap().stacks.get().into();
-    let mut target = world
-        .get_mut::<Target>(context.entity)
-        .expect("debuff target not found");
-
-    if DEBUFF {
-        // FIXME: possible underflow
-        **target -= delta;
-    } else {
-        **target += delta;
-    }
-}
-
-#[cfg(feature = "server")]
-fn on_remove<
-    const DEBUFF: bool,
-    T: Component + std::ops::Deref<Target = StackableStatusEffect>,
-    Target: Component<Mutability = Mutable> + DerefMut,
->(
-    mut world: DeferredWorld,
-    context: HookContext,
-) where
-    Target::Target: Sized + From<u8> + AddAssign + SubAssign,
-{
-    #[allow(
-        clippy::unwrap_used,
-        reason = "on_remove is always called right before T is removed"
-    )]
-    let delta = world.get::<T>(context.entity).unwrap().stacks.get().into();
-    let mut target = world
-        .get_mut::<Target>(context.entity)
-        .expect("debuff target not found");
-
-    if DEBUFF {
-        **target += delta;
-    } else {
-        // FIXME: possible underflow
-        **target -= delta;
     }
 }

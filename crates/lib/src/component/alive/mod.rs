@@ -19,6 +19,18 @@ impl Health {
     }
 }
 
+impl std::ops::SubAssign<u16> for Health {
+    fn sub_assign(&mut self, rhs: u16) {
+        self.current = self.current.saturating_sub(rhs);
+    }
+}
+
+impl std::ops::AddAssign<u16> for Health {
+    fn add_assign(&mut self, rhs: u16) {
+        self.current = self.cap.min(self.current + rhs);
+    }
+}
+
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
 pub struct Mana(pub Meter);
 
@@ -35,7 +47,7 @@ pub struct Dps(pub u16);
 /// Increases movement speed and attack rate[^1].
 ///
 /// [^1]: DPS remains respected; thus, an increased agility will decrease the damage per hit.
-pub struct Agility(pub u8);
+pub struct Agility(pub i16);
 
 impl Agility {
     pub const MOVE_SPEED_ADJUST: Scalar = 0.1;

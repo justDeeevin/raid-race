@@ -57,8 +57,8 @@ fn walk(
         let t = forces.linear_velocity();
         Vector::new(t.x, 0.0, t.z)
     };
-    let target_velocity =
-        move_dir.as_dvec3() * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as Scalar));
+    let target_velocity = move_dir.as_dvec3()
+        * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as Scalar)).max(0.0);
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
 
     let required_acceleration = (new_velocity - velocity) / delta_t;
@@ -174,9 +174,7 @@ fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackCooldown)>, mut health: Query
     if let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source)
         && let Ok(mut health) = health.get_mut(event.target)
     {
-        health.current = health
-            .current
-            .saturating_sub((*damage as f32 * timer.duration().as_secs_f32()) as u16);
+        *health -= (*damage as f32 * timer.duration().as_secs_f32()) as u16;
     }
 }
 

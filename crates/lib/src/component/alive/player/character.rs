@@ -23,7 +23,7 @@ impl Character {
             AbilityId::StrikeCombo,
             AbilityId::Spin,
             AbilityId::Meditate,
-            AbilityId::Strike,
+            AbilityId::Kick,
         ];
 
         (

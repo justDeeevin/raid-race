@@ -1,7 +1,4 @@
 {
-  # TODO:
-  # description = "";
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";

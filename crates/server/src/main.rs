@@ -13,7 +13,6 @@ fn main() {
                 ..Default::default()
             }),
             server::plugin,
-            status::plugin,
             console::plugin,
             player::plugin,
         ))

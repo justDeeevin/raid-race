@@ -24,7 +24,7 @@ pub struct Player {
     #[builder(default)]
     defense: i16,
     #[builder(default)]
-    agility: u8,
+    agility: i16,
     #[builder(default)]
     cdr: u16,
     #[builder(default)]

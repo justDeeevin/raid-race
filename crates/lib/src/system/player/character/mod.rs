@@ -1,11 +1,9 @@
 macro_rules! abilities {
-    ($character:ident {
-        $($ability:ident {
-            cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block $(,
-            cooldown: $cooldown:expr)? $(,
-            ready: $ready:expr)? $(,)?
-        }),* $(,)?
-    }) => {
+    ($($ability:ident {
+        cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block $(,
+        cooldown: $cooldown:expr)? $(,
+        ready: $ready:expr)? $(,)?
+    }),* $(,)?) => {
         #[derive(::serde::Serialize, ::serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, ::strum::EnumString)]
         pub enum AbilityId {$($ability),*}
         $(

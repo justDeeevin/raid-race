@@ -221,7 +221,6 @@ fn grabber(
     mut options: Single<&mut CursorOptions, With<PrimaryWindow>>,
     mut commands: Commands,
 ) {
-    #[allow(clippy::unwrap_used, reason = "there's always only one primary window")]
     let keys = key.read().collect::<Vec<_>>();
     let (entity, looking) = *player;
     let enter = button

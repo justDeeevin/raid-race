@@ -115,7 +115,7 @@ pub fn plugin(app: &mut App) {
         .register_input_action::<Ability<4>>()
         .register_input_action::<Ability<5>>();
 
-    app.add_plugins(system::player::plugin);
+    app.add_plugins((system::player::plugin, system::status::plugin));
 
     app.add_plugins((
         LightyearAvianPlugin::default(),

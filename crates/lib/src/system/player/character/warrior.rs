@@ -1,23 +1,25 @@
 use crate::{
     component::alive::{
-        Dps, Health,
+        Agility, Dps, Health,
         player::{
             AttackCooldown,
             character::{Character, CharacterData, Cooldowns},
         },
+        status::{AgilityDown, StackableStatusEffect},
     },
     event::{Attacked, Hit},
-    system::player::PLAYER_HEIGHT,
+    system::player::{PLAYER_HEIGHT, PLAYER_RADIUS},
 };
 use avian3d::{
-    math::{Quaternion, Scalar},
+    math::{Quaternion, Scalar, Vector},
     prelude::*,
 };
 use bevy::prelude::*;
 use either::Either;
-use std::time::Duration;
+use std::{num::NonZero, time::Duration};
 
-abilities!(warrior {
+// TODO: LOS checks?
+abilities! {
     Strike {
         cast: (event, mut params| Query<(&mut AttackCooldown, &mut Character, &mut Cooldowns)>, mut commands| Commands) {
             const COMBO_WINDOW: Duration = Duration::from_secs(3);
@@ -93,7 +95,35 @@ abilities!(warrior {
         },
         cooldown: Duration::from_secs(10),
     },
-});
+    Kick {
+        cast: (event, space| SpatialQuery, params| Query<(&Position, &Rotation)>, mut targets| Query<&mut Health, With<Agility>>, mut commands| Commands) {
+            const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
+            #[allow(clippy::unwrap_used, reason = "this is const")]
+            const STACKS: NonZero<u8> = NonZero::new(40).unwrap();
+            const DURATION: Duration = Duration::from_secs(5);
+            const DAMAGE: u16 = 6;
+
+            if let Ok((position, rotation)) = params.get(**event) {
+                for hit in space.shape_intersections(
+                    &Collider::cuboid(HITBOX_DIMENSIONS.x, HITBOX_DIMENSIONS.y, HITBOX_DIMENSIONS.z),
+                    **position + (**rotation * Vector::new(
+                        0.0,
+                        (-PLAYER_HEIGHT / 2.0) + (HITBOX_DIMENSIONS.y / 2.0),
+                        -PLAYER_RADIUS - (HITBOX_DIMENSIONS.z / 2.0),
+                    )),
+                    **rotation,
+                    &default(),
+                ) {
+                    if let Ok(mut health) = targets.get_mut(hit) {
+                        commands.entity(hit).insert(AgilityDown(StackableStatusEffect::new(STACKS, DURATION)));
+                        *health -= DAMAGE;
+                    }
+                }
+            }
+        },
+        cooldown: Duration::from_secs(10),
+    }
+}
 
 fn strike_bonus(
     event: On<Hit>,
@@ -111,9 +141,7 @@ fn strike_bonus(
         && let Ok(mut target) = target.get_mut(event.target)
     {
         if *strike || *combo > 0 {
-            target.current = target
-                .current
-                .saturating_sub((*dps as f32 * (*strike_bonus_percent as f32 / 100.0)) as u16);
+            *target -= (*dps as f32 * (*strike_bonus_percent as f32 / 100.0)) as u16;
         }
 
         if *strike {
@@ -172,10 +200,9 @@ fn spin(
                     &SpatialQueryFilter::from_excluded_entities([entity]),
                 ) {
                     if let Ok(mut health) = healths.get_mut(hit) {
-                        health.current = health.current.saturating_sub(
-                            (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER)
-                                as u16,
-                        );
+                        *health -= (**dps as f32
+                            * timer.duration().as_secs_f32()
+                            * DAMAGE_MULTIPLIER) as u16;
                     }
                 }
             }
@@ -201,10 +228,8 @@ fn meditate(characters: Query<(&mut Character, &mut Health)>, time: Res<Time>) {
             } else if let Some(timer) = meditate
                 && timer.tick(time.delta()).just_finished()
             {
-                health.current = health.cap.min(
-                    health.current
-                        + (health.cap as f32 * (HEAL_PERCENT_PER_TICK as f32 * 0.01)) as u16,
-                );
+                let cap = health.cap as f32;
+                *health += (cap * (HEAL_PERCENT_PER_TICK as f32 * 0.01)) as u16;
             }
         }
     }

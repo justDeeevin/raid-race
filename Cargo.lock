@@ -7930,6 +7930,7 @@ dependencies = [
  "either",
  "hakari",
  "lightyear",
+ "num-traits",
  "serde",
  "strum",
  "totp-rs",
