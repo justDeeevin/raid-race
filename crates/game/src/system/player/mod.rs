@@ -13,7 +13,7 @@ use bevy_console::{
     clap::{self, Parser},
 };
 use lightyear::prelude::{
-    Controlled,
+    Controlled, MessageReceiver,
     input::bei::{
         Action, ActionOf, Binding, Bindings, Cardinal, ContextActivity, InputAction, bindings,
     },
@@ -21,8 +21,12 @@ use lightyear::prelude::{
 use raid_race_lib::{
     component::alive::{
         Id,
-        player::{Pitch, Player},
+        player::{
+            Pitch, Player,
+            character::{AbilityId, Character, CharacterData, Cooldowns},
+        },
     },
+    event::Slotted,
     input::{Ability, Attack, Jump, Look, Walk},
     system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
 };
@@ -249,12 +253,26 @@ fn grabber(
     }
 }
 
+fn slot(
+    mut rx: Single<&mut MessageReceiver<Slotted>>,
+    mut players: Query<(&Character, &mut Cooldowns)>,
+) {
+    for Slotted { entity, index } in rx.receive() {
+        if let Ok((character, mut cooldowns)) = players.get_mut(entity) {
+            cooldowns[index] = match character.data {
+                CharacterData::Warrior { abilities, .. } => abilities[index].cooldown(),
+            }
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
             orbit,
             grabber.run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
+            slot,
         ),
     )
     .add_observer(spawn)

@@ -1,11 +1,11 @@
 use crate::{
     component::alive::{
-        Agility, Dps, Health,
+        Agility, Defense, Dps, Health,
         player::{
             AttackCooldown,
             character::{Character, CharacterData, Cooldowns},
         },
-        status::{AgilityDown, DpsUp, StackableStatusEffect},
+        status::{AgilityDown, DefenseDown, DpsUp, StackableStatusEffect},
     },
     event::{Attacked, Hit},
     system::player::{PLAYER_HEIGHT, PLAYER_RADIUS},
@@ -16,19 +16,24 @@ use avian3d::{
 };
 use bevy::prelude::*;
 use either::Either;
+use lightyear::{connection::network_target::Target, prelude::Replicate};
 use std::{num::NonZero, time::Duration};
 
 // TODO: LOS checks?
 abilities! {
     Strike {
-        cast: (event, mut params| Query<(&mut AttackCooldown, &mut Character, &mut Cooldowns)>, mut commands| Commands) {
+        cast: (
+            event,
+            mut params| Query<(&mut AttackCooldown, &mut Character, &mut Cooldowns)>,
+            mut commands| Commands
+        ) {
             const COMBO_WINDOW: Duration = Duration::from_secs(3);
 
             if let Ok((mut timer, mut character, mut cooldowns)) = params.get_mut(**event)
                 && let CharacterData::Warrior {
                     strike,
                     combo_window,
-                    combo_slot,
+                    combo_index,
                     ..
                 } = &mut character.data
             {
@@ -37,7 +42,7 @@ abilities! {
                 *strike = true;
                 commands.trigger(Attacked(**event));
 
-                if let Some(slot) = combo_slot
+                if let Some(slot) = combo_index
                     && let Some(Either::Right(ready)) = cooldowns.get_mut(*slot - 1)
                 {
                     *ready = true;
@@ -97,9 +102,15 @@ abilities! {
         cooldown: Duration::from_secs(10),
     },
     Kick {
-        cast: (event, space| SpatialQuery, params| Query<(&Position, &Rotation)>, mut targets| Query<&mut Health, With<Agility>>, mut commands| Commands) {
+        cast: (
+            event,
+            space| SpatialQuery,
+            params| Query<(&Position, &Rotation)>,
+            mut targets| Query<&mut Health, With<Agility>>,
+            mut commands| Commands
+        ) {
             const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
-            #[allow(clippy::unwrap_used, reason = "this is const")]
+            #[allow(clippy::unwrap_used, reason = "const")]
             const STACKS: NonZero<u8> = NonZero::new(40).unwrap();
             const DURATION: Duration = Duration::from_secs(5);
             const DAMAGE: u16 = 6;
@@ -116,7 +127,8 @@ abilities! {
                     &default(),
                 ) {
                     if let Ok(mut health) = targets.get_mut(hit) {
-                        commands.entity(hit).insert(AgilityDown(StackableStatusEffect::new(STACKS, DURATION)));
+                        commands.entity(hit)
+                            .insert(AgilityDown(StackableStatusEffect::new(STACKS, DURATION)));
                         *health -= DAMAGE;
                     }
                 }
@@ -133,22 +145,83 @@ abilities! {
         cooldown: Duration::from_secs(10),
     },
     Trance {
-        cast: (event, mut params| Query<(&Dps, &mut AttackCooldown, &mut Character)>, mut commands| Commands) {
+        cast: (
+            event,
+            mut params| Query<(&Dps, &mut AttackCooldown, &mut Character)>,
+            mut commands| Commands
+        ) {
             const DURATION: Duration = Duration::from_secs(7);
 
-            if let Ok((Dps(dps), mut timer, mut character)) = params.get_mut(**event) && let CharacterData::Warrior {trance, ..} = &mut character.data {
+            if let Ok((Dps(dps), mut timer, mut character)) = params.get_mut(**event)
+                && let CharacterData::Warrior {trance, ..} = &mut character.data
+            {
                 let new_cd = timer.duration() - (timer.duration() / 4);
                 timer.set_duration(new_cd);
 
                 *trance = Some(Timer::new(DURATION, TimerMode::Once));
 
                 if let Some(stacks) = NonZero::new((*dps as f32 * 1.25) as u8) {
-                    commands.entity(**event).insert(DpsUp(StackableStatusEffect::new(stacks, DURATION)));
+                    commands.entity(**event)
+                        .insert(DpsUp(StackableStatusEffect::new(stacks, DURATION)));
                 }
 
             }
         },
         name: "Battle Trance",
+        cooldown: Duration::from_secs(10),
+    },
+    Crimp {
+        cast: (
+            event,
+            sources| Query<(&Position, &Rotation)>,
+            targets| Query<&Defense>,
+            space| SpatialQuery,
+            mut commands| Commands
+        ) {
+            const DURATION: Duration = Duration::from_secs(2);
+
+            const START_WIDTH: Scalar = 1.0;
+            const END_WIDTH: Scalar = 1.0;
+            const LENGTH: Scalar = 1.0;
+            const HEIGHT: Scalar= 1.0;
+
+            #[allow(clippy::unwrap_used, reason = "static definition")]
+            let collider = Collider::convex_hull(vec![
+                Vector::new(-START_WIDTH / 2.0, 0.0, 0.0),
+                Vector::new(-END_WIDTH / 2.0, 0.0, -LENGTH),
+                Vector::new(END_WIDTH / 2.0, 0.0, -LENGTH),
+                Vector::new(START_WIDTH / 2.0, 0.0, 0.0),
+                Vector::new(-START_WIDTH / 2.0, HEIGHT, 0.0),
+                Vector::new(-END_WIDTH / 2.0, HEIGHT, -LENGTH),
+                Vector::new(END_WIDTH / 2.0, HEIGHT, -LENGTH),
+                Vector::new(START_WIDTH / 2.0, HEIGHT, 0.0),
+            ]).unwrap();
+
+            if let Ok((position, rotation)) = sources.get(**event) {
+                commands.spawn((
+                    collider.clone(),
+                    Position(**position + (**rotation * Vector::new(0.0, 0.0, -PLAYER_RADIUS))),
+                    *rotation,
+                ));
+
+                for hit in space.shape_intersections(
+                    &collider,
+                    **position + (**rotation * Vector::new(0.0, -HEIGHT / 2.0, -PLAYER_RADIUS)),
+                    **rotation,
+                    &Default::default()
+                ) {
+                    if let Ok(defense) = targets.get(hit)
+                    {
+                        #[allow(clippy::unwrap_used, reason = "cannot panic")]
+                        commands.entity(hit)
+                            .insert(DefenseDown(StackableStatusEffect::new(
+                                NonZero::new(((**defense as f32 * 0.15) as u8).max(1)).unwrap(),
+                                DURATION
+                            )));
+                    }
+                }
+            }
+        },
         cooldown: Duration::from_secs(10),
     },
 }
@@ -187,12 +260,12 @@ fn combo_window(warriors: Query<(&mut Character, &mut Cooldowns)>, time: Res<Tim
     for (mut character, mut cooldowns) in warriors {
         if let CharacterData::Warrior {
             combo_window,
-            combo_slot,
+            combo_index,
             ..
         } = &mut character.data
             && let Some(timer) = combo_window
             && timer.tick(time.delta()).is_finished()
-            && let Some(slot) = combo_slot
+            && let Some(slot) = combo_index
             && let Some(Either::Right(ready)) = cooldowns.get_mut(*slot - 1)
         {
             *ready = false;

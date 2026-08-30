@@ -1,14 +1,19 @@
 use bevy::{platform::cell::SyncCell, prelude::*};
 use clap::{Args, Parser, error::ErrorKind};
+use lightyear::{
+    connection::network_target::Target, link::server::Server, prelude::ServerMultiMessageSender,
+};
 use raid_race_lib::{
+    Channel,
     component::alive::{
         Cdr, Health, Id,
         player::{
-            character::{AbilityId, Character, CharacterData, CharacterName, Cooldowns},
+            character::{Character, CharacterData, CharacterName, Cooldowns},
             weapon::{HeldWeapon, Weapon},
         },
         status::Poison,
     },
+    event::Slotted,
     system::player::character::warrior,
 };
 use rustyline::{DefaultEditor, config::Configurer, error::ReadlineError};
@@ -146,16 +151,19 @@ struct SlotCommand {
 }
 
 #[instrument(skip_all)]
-fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character, &mut Cooldowns)>) {
-    let Some((mut character, mut cooldowns)) =
-        warriors.iter_mut().find_map(|(id, character, cooldowns)| {
-            if **id == event.target {
-                Some((character, cooldowns))
-            } else {
-                None
-            }
-        })
-    else {
+fn slot(
+    event: On<SlotCommand>,
+    mut warriors: Query<(&Id, Entity, &mut Character)>,
+    mut tx: ServerMultiMessageSender,
+    server: Single<&Server>,
+) {
+    let Some((entity, mut character)) = warriors.iter_mut().find_map(|(id, entity, character)| {
+        if **id == event.target {
+            Some((entity, character))
+        } else {
+            None
+        }
+    }) else {
         error!("target not found");
         return;
     };
@@ -163,7 +171,7 @@ fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character, &mut C
     match &mut character.data {
         CharacterData::Warrior {
             abilities,
-            combo_slot,
+            combo_index,
             ..
         } => {
             let Some(slot) = abilities.get_mut(event.slot - 1) else {
@@ -172,16 +180,29 @@ fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character, &mut C
             };
 
             if let Ok(ability) = event.ability.parse::<warrior::AbilityId>() {
-                cooldowns[event.slot - 1] = ability.cooldown();
                 *slot = ability;
                 if ability == warrior::AbilityId::StrikeCombo {
-                    *combo_slot = Some(event.slot);
+                    *combo_index = Some(event.slot - 1);
                 }
             } else {
                 error!("invalid ability");
             }
         }
     }
+
+    #[allow(
+        clippy::unwrap_used,
+        reason = "should never fail because channel is reliable"
+    )]
+    tx.send::<_, Channel>(
+        &Slotted {
+            entity,
+            index: event.slot - 1,
+        },
+        &*server,
+        &Target::All,
+    )
+    .unwrap();
 }
 
 #[derive(Event, Args)]

@@ -17,9 +17,12 @@ fn alert_attack(
         Target::All
     };
 
-    if let Err(e) = tx.send::<Attacked, Channel>(&event, &server, &target) {
-        tracing::error!(%e, "Failed to send attacked message");
-    }
+    #[allow(
+        clippy::unwrap_used,
+        reason = "should never fail because channel is reliable"
+    )]
+    tx.send::<Attacked, Channel>(&event, &server, &target)
+        .unwrap();
 }
 
 pub fn plugin(app: &mut App) {

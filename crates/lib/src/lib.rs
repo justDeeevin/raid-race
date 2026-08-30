@@ -15,7 +15,7 @@ use component::alive::{
     status::*,
     *,
 };
-use event::Attacked;
+use event::*;
 use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
@@ -81,6 +81,8 @@ pub fn plugin(app: &mut App) {
 
     replicate!(
         Agility,
+        AgilityDown,
+        AgilityUp,
         Cdr,
         Character,
         Defense,
@@ -130,8 +132,14 @@ pub fn plugin(app: &mut App) {
     app.register_message::<Attacked>()
         .add_direction(NetworkDirection::ServerToClient)
         .add_map_entities();
-    app.add_channel::<Channel>(ChannelSettings::default())
-        .add_direction(NetworkDirection::Bidirectional);
+    app.register_message::<Slotted>()
+        .add_direction(NetworkDirection::ServerToClient)
+        .add_map_entities();
+    app.add_channel::<Channel>(ChannelSettings {
+        mode: ChannelMode::UnorderedReliable(Default::default()),
+        ..Default::default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
 
     app.add_plugins(BlockoutPlugin)
         .add_systems(Startup, scene::test.spawn());

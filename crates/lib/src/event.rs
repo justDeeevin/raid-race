@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 pub struct Attacked(pub Entity);
 
 impl MapEntities for Attacked {
-    fn map_entities<E: bevy::ecs::entity::EntityMapper>(&mut self, entity_mapper: &mut E) {
+    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
         self.0.map_entities(entity_mapper);
     }
 }
@@ -30,5 +30,17 @@ impl<T> Cast<T> {
             entity,
             _marker: PhantomData,
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Slotted {
+    pub entity: Entity,
+    pub index: usize,
+}
+
+impl MapEntities for Slotted {
+    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
+        self.entity.map_entities(entity_mapper);
     }
 }
