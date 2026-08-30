@@ -5,6 +5,7 @@ macro_rules! abilities {
         ready: $ready:expr)? $(,)?
     }),* $(,)?) => {
         #[derive(::serde::Serialize, ::serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, ::strum::EnumString)]
+        #[strum(serialize_all = "snake_case")]
         pub enum AbilityId {$($ability),*}
         $(
             struct $ability;
@@ -20,11 +21,15 @@ macro_rules! abilities {
                 ),*}
             }
 
-            fn cooldown(&self) -> ::either::Either<::std::time::Duration, bool> {
+            fn cooldown(&self) -> ::either::Either<::bevy::time::Timer, bool> {
                 use ::either::Either;
                 match self {$(
                         Self::$ability => {
-                            $(Either::Left($cooldown))?
+                            $(
+                                let mut cd = ::bevy::time::Timer::new($cooldown, ::bevy::time::TimerMode::Once);
+                                cd.finish();
+                                Either::Left(cd)
+                            )?
                             $(Either::Right($ready))?
                         }
                 ),*}

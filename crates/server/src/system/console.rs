@@ -4,7 +4,7 @@ use raid_race_lib::{
     component::alive::{
         Cdr, Health, Id,
         player::{
-            character::{Character, CharacterData, CharacterName, Cooldowns},
+            character::{AbilityId, Character, CharacterData, CharacterName, Cooldowns},
             weapon::{HeldWeapon, Weapon},
         },
         status::Poison,
@@ -146,14 +146,16 @@ struct SlotCommand {
 }
 
 #[instrument(skip_all)]
-fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character)>) {
-    let Some(mut character) = warriors.iter_mut().find_map(|(id, character)| {
-        if **id == event.target {
-            Some(character)
-        } else {
-            None
-        }
-    }) else {
+fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character, &mut Cooldowns)>) {
+    let Some((mut character, mut cooldowns)) =
+        warriors.iter_mut().find_map(|(id, character, cooldowns)| {
+            if **id == event.target {
+                Some((character, cooldowns))
+            } else {
+                None
+            }
+        })
+    else {
         error!("target not found");
         return;
     };
@@ -170,10 +172,13 @@ fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character)>) {
             };
 
             if let Ok(ability) = event.ability.parse::<warrior::AbilityId>() {
+                cooldowns[event.slot - 1] = ability.cooldown();
                 *slot = ability;
                 if ability == warrior::AbilityId::StrikeCombo {
                     *combo_slot = Some(event.slot);
                 }
+            } else {
+                error!("invalid ability");
             }
         }
     }

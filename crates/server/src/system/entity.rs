@@ -52,7 +52,7 @@ impl Player {
         let client_replicate = Replicate::to_clients(NetworkTarget::Single(id));
 
         let mut attack = Timer::from_seconds(1.0, TimerMode::Once);
-        attack.almost_finish();
+        attack.finish();
 
         commands.spawn((
             (

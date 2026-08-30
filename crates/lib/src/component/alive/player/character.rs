@@ -37,6 +37,7 @@ impl Character {
                     combo: 0,
                     spin: None,
                     meditate: None,
+                    trance: None,
                 },
                 channel: None,
             },
@@ -57,6 +58,7 @@ pub enum CharacterData {
         combo: u8,
         spin: Option<(usize, Timer)>,
         meditate: Option<Timer>,
+        trance: Option<Timer>,
     },
 }
 
@@ -73,17 +75,11 @@ pub struct Cooldowns(pub [Either<Timer, bool>; N_ABILITIES]);
 
 impl<T: AbilityId> From<&Abilities<T>> for Cooldowns {
     fn from(value: &Abilities<T>) -> Self {
-        Self(std::array::from_fn(|i| {
-            value[i].cooldown().map_left(|d| {
-                let mut out = Timer::new(d, TimerMode::Once);
-                out.finish();
-                out
-            })
-        }))
+        Self(std::array::from_fn(|i| value[i].cooldown()))
     }
 }
 
 pub trait AbilityId {
     fn trigger(&self, entity: Entity, commands: &mut Commands);
-    fn cooldown(&self) -> Either<Duration, bool>;
+    fn cooldown(&self) -> Either<Timer, bool>;
 }

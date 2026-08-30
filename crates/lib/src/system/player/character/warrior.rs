@@ -5,7 +5,7 @@ use crate::{
             AttackCooldown,
             character::{Character, CharacterData, Cooldowns},
         },
-        status::{AgilityDown, StackableStatusEffect},
+        status::{AgilityDown, DpsUp, StackableStatusEffect},
     },
     event::{Attacked, Hit},
     system::player::{PLAYER_HEIGHT, PLAYER_RADIUS},
@@ -63,13 +63,13 @@ abilities! {
     },
     Spin {
         cast: (event, mut characters| Query<&mut Character>) {
-            const SPIN_DURATION: Duration = Duration::from_secs(1);
+            const DURATION: Duration = Duration::from_secs(1);
 
             if let Ok(mut character) = characters.get_mut(**event)
                 && let CharacterData::Warrior { spin, .. } = &mut character.data
             {
-                let mut timer = Timer::new(SPIN_DURATION / 5, TimerMode::Repeating);
-                timer.finish();
+                let mut timer = Timer::new(DURATION / 5, TimerMode::Repeating);
+                timer.almost_finish();
                 *spin = Some((0, timer));
             }
         },
@@ -127,6 +127,24 @@ abilities! {
         cast: (event, mut params| Query<(&Rotation, &mut LinearVelocity)>) {
             if let Ok((rotation, mut velocity)) = params.get_mut(**event) {
                 **velocity += **rotation * Vector::new(0.0, 6.0, -8.0);
+            }
+        },
+        cooldown: Duration::from_secs(10),
+    },
+    Trance {
+        cast: (event, mut params| Query<(&Dps, &mut AttackCooldown, &mut Character)>, mut commands| Commands) {
+            const DURATION: Duration = Duration::from_secs(7);
+
+            if let Ok((Dps(dps), mut timer, mut character)) = params.get_mut(**event) && let CharacterData::Warrior {trance, ..} = &mut character.data {
+                let new_cd = timer.duration() - (timer.duration() / 4);
+                timer.set_duration(new_cd);
+
+                *trance = Some(Timer::new(DURATION, TimerMode::Once));
+
+                if let Some(stacks) = NonZero::new((*dps as f32 * 1.25) as u8) {
+                    commands.entity(**event).insert(DpsUp(StackableStatusEffect::new(stacks, DURATION)));
+                }
+
             }
         },
         cooldown: Duration::from_secs(10),
@@ -198,24 +216,21 @@ fn spin(
             continue;
         };
 
-        if let Some((n, timer)) = spin_timer {
-            if timer.just_finished() {
-                *n += 1;
-                for hit in space.shape_intersections(
-                    &Collider::cylinder(AOE_RADIUS, AOE_HEIGHT),
-                    **position,
-                    Quaternion::default(),
-                    &SpatialQueryFilter::from_excluded_entities([entity]),
-                ) {
-                    if let Ok(mut health) = healths.get_mut(hit) {
-                        *health -= (**dps as f32
-                            * timer.duration().as_secs_f32()
-                            * DAMAGE_MULTIPLIER) as u16;
-                    }
+        if let Some((n, timer)) = spin_timer
+            && timer.tick(time.delta()).just_finished()
+        {
+            *n += 1;
+            for hit in space.shape_intersections(
+                &Collider::cylinder(AOE_RADIUS, AOE_HEIGHT),
+                **position,
+                Quaternion::default(),
+                &SpatialQueryFilter::from_excluded_entities([entity]),
+            ) {
+                if let Ok(mut health) = healths.get_mut(hit) {
+                    *health -=
+                        (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER) as u16;
                 }
             }
-
-            timer.tick(time.delta());
         }
 
         if spin_timer.as_ref().is_some_and(|(n, _)| *n >= 5) {
@@ -243,8 +258,25 @@ fn meditate(characters: Query<(&mut Character, &mut Health)>, time: Res<Time>) {
     }
 }
 
+fn trance(characters: Query<(&mut Character, &mut Health, &mut AttackCooldown)>, time: Res<Time>) {
+    for (mut character, mut health, mut cd) in characters {
+        if let CharacterData::Warrior { trance, .. } = &mut character.data
+            && let Some(timer) = trance
+        {
+            if timer.tick(time.delta()).just_finished() {
+                *trance = None;
+
+                let new_cd = cd.duration() + cd.duration() / 3;
+                cd.set_duration(new_cd);
+            } else {
+                health.current = health.current.max((health.cap as f32 * 0.05) as u16);
+            }
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     add_ability_systems(app);
-    app.add_systems(FixedUpdate, (combo_window, spin, meditate))
+    app.add_systems(FixedUpdate, (combo_window, spin, meditate, trance))
         .add_observer(strike_bonus);
 }
