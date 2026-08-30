@@ -8,7 +8,7 @@ use crate::{
     event::{Attacked, Hit},
     system::player::camera_transform,
 };
-use avian3d::prelude::*;
+use avian3d::{math::Scalar, prelude::*};
 use bevy::prelude::*;
 
 pub fn attack(
@@ -17,7 +17,7 @@ pub fn attack(
     players: Query<(&HeldWeapon, &Position, &Rotation, &Pitch)>,
     mut commands: Commands,
 ) {
-    const MAX_DISTANCE: f64 = 200.0;
+    const MAX_DISTANCE: Scalar = 200.0;
 
     let Ok((HeldWeapon(weapon), position, rotation, pitch)) = players.get(**event) else {
         return;

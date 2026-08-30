@@ -9,7 +9,10 @@ use crate::{
     event::{Attacked, Hit},
     system::player::PLAYER_HEIGHT,
 };
-use avian3d::{math::Quaternion, prelude::*};
+use avian3d::{
+    math::{Quaternion, Scalar},
+    prelude::*,
+};
 use bevy::prelude::*;
 use either::Either;
 use std::time::Duration;
@@ -123,8 +126,8 @@ fn spin(
     space: SpatialQuery,
     time: Res<Time>,
 ) {
-    const AOE_RADIUS: f64 = 3.0;
-    const AOE_HEIGHT: f64 = PLAYER_HEIGHT;
+    const AOE_RADIUS: Scalar = 3.0;
+    const AOE_HEIGHT: Scalar = PLAYER_HEIGHT;
     const DAMAGE_MULTIPLIER: f32 = 2.0;
 
     for (entity, mut character, position, dps) in characters {

@@ -1,6 +1,7 @@
 pub mod player;
 pub mod status;
 
+use avian3d::math::Scalar;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +38,7 @@ pub struct Dps(pub u16);
 pub struct Agility(pub u8);
 
 impl Agility {
-    pub const MOVE_SPEED_ADJUST: f32 = 0.1;
+    pub const MOVE_SPEED_ADJUST: Scalar = 0.1;
 }
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]

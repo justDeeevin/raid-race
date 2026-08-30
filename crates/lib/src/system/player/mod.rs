@@ -14,7 +14,7 @@ use crate::{
     scene::Dummy,
 };
 use avian3d::{
-    math::{Quaternion, Vector},
+    math::{Quaternion, Scalar, Vector},
     prelude::*,
 };
 use bevy::prelude::*;
@@ -24,19 +24,19 @@ use bevy_enhanced_input::action::{
 };
 use either::Either;
 
-pub const PLAYER_HEIGHT: f64 = 2.0;
+pub const PLAYER_HEIGHT: Scalar = 2.0;
 // -- DON'T CHANGE --
-pub const PLAYER_CAPSULE_LENGTH: f64 = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
+pub const PLAYER_CAPSULE_LENGTH: Scalar = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
 // ------------------
-pub const PLAYER_RADIUS: f64 = PLAYER_HEIGHT / 8.0;
+pub const PLAYER_RADIUS: Scalar = PLAYER_HEIGHT / 8.0;
 
 fn walk(
     event: On<Fire<Walk>>,
     mut params: Query<(&ComputedMass, &Transform, &Agility, Forces)>,
     time: Res<Time>,
 ) {
-    const MAX_SPEED: f32 = 5.0;
-    const MAX_ACCELERATION: f64 = 40.0;
+    const MAX_SPEED: Scalar = 5.0;
+    const MAX_ACCELERATION: Scalar = 40.0;
 
     let Ok((mass, transform, agility, mut forces)) = params.get_mut(event.context) else {
         return;
@@ -54,9 +54,8 @@ fn walk(
         let t = forces.linear_velocity();
         Vector::new(t.x, 0.0, t.z)
     };
-    let target_velocity = move_dir
-        .map(|d| d * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as f32)))
-        .as_dvec3();
+    let target_velocity =
+        move_dir.as_dvec3() * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as Scalar));
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
 
     let required_acceleration = (new_velocity - velocity) / delta_t;
@@ -65,7 +64,7 @@ fn walk(
 }
 
 fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity, With<Grounded>>) {
-    const JUMP_SPEED: f64 = 3.0;
+    const JUMP_SPEED: Scalar = 3.0;
 
     if let Ok(mut velocity) = velocity.get_mut(event.context) {
         velocity.y = JUMP_SPEED
@@ -73,9 +72,9 @@ fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity, With<Gr
 }
 
 fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
-    const YAW_SENS: f64 = 0.003;
-    const PITCH_SENS: f64 = YAW_SENS;
-    const MAX_PITCH: f64 = std::f64::consts::FRAC_PI_2;
+    const YAW_SENS: Scalar = 0.003;
+    const PITCH_SENS: Scalar = YAW_SENS;
+    const MAX_PITCH: Scalar = std::f64::consts::FRAC_PI_2;
 
     let delta = -event.value;
 
@@ -83,12 +82,12 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
         return;
     };
 
-    **pitch = (**pitch + (delta.y as f64 * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
+    **pitch = (**pitch + (delta.y as Scalar * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
 
     let (yaw, pitch, roll) = rotation.to_euler(EulerRot::YXZ);
     **rotation = Quaternion::from_euler(
         EulerRot::YXZ,
-        yaw + (delta.x as f64 * YAW_SENS),
+        yaw + (delta.x as Scalar * YAW_SENS),
         pitch,
         roll,
     );
@@ -118,8 +117,8 @@ fn grounded(
     grounded: Query<(), With<Grounded>>,
     mut commands: Commands,
 ) {
-    const MIN_ANGLE: f64 = 30_f64.to_radians();
-    const MAX_DISTANCE: f64 = 0.1;
+    const MIN_ANGLE: Scalar = 30_f64.to_radians();
+    const MAX_DISTANCE: Scalar = 0.1;
 
     let sin = MIN_ANGLE.sin();
 
