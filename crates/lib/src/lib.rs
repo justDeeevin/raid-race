@@ -4,7 +4,7 @@ pub mod input;
 pub mod scene;
 pub mod system;
 
-use avian3d::{math::Scalar, prelude::*};
+use avian3d::prelude::*;
 use bevy::{
     app::{App, PluginGroup, Startup},
     scene::SpawnListSystem,
@@ -30,8 +30,6 @@ use std::{
     time::Duration,
 };
 use totp_rs::{Builder, Totp};
-
-pub type Meters = Scalar;
 
 pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
 pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);

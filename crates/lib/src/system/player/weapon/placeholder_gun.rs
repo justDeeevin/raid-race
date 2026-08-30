@@ -1,14 +1,12 @@
 use avian3d::{math::Vector, prelude::*};
 use bevy::prelude::*;
 
-use crate::Meters;
-
 pub fn shoot(
     space: SpatialQuery,
     source: Entity,
     origin: Vector,
     direction: Dir3,
-    distance: Meters,
+    distance: f64,
 ) -> Option<Entity> {
     let filter = SpatialQueryFilter::from_excluded_entities([source]);
 

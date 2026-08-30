@@ -1,7 +1,6 @@
 pub mod placeholder_gun;
 
 use crate::{
-    Meters,
     component::alive::player::{
         Pitch,
         weapon::{HeldWeapon, Weapon},
@@ -18,7 +17,7 @@ pub fn attack(
     players: Query<(&HeldWeapon, &Position, &Rotation, &Pitch)>,
     mut commands: Commands,
 ) {
-    const MAX_DISTANCE: Meters = 200.0;
+    const MAX_DISTANCE: f64 = 200.0;
 
     let Ok((HeldWeapon(weapon), position, rotation, pitch)) = players.get(**event) else {
         return;

@@ -1,5 +1,4 @@
 use crate::{
-    Meters,
     component::alive::{
         Dps, Health,
         player::{
@@ -124,8 +123,8 @@ fn spin(
     space: SpatialQuery,
     time: Res<Time>,
 ) {
-    const AOE_RADIUS: Meters = 3.0;
-    const AOE_HEIGHT: Meters = PLAYER_HEIGHT;
+    const AOE_RADIUS: f64 = 3.0;
+    const AOE_HEIGHT: f64 = PLAYER_HEIGHT;
     const DAMAGE_MULTIPLIER: f32 = 2.0;
 
     for (entity, mut character, position, dps) in characters {
