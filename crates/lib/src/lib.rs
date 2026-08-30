@@ -9,6 +9,7 @@ use bevy::{
     app::{App, PluginGroup, Startup},
     scene::SpawnListSystem,
 };
+use bevy_blockout::BlockoutPlugin;
 use component::alive::{
     player::{character::*, weapon::*, *},
     status::*,
@@ -132,7 +133,8 @@ pub fn plugin(app: &mut App) {
     app.add_channel::<Channel>(ChannelSettings::default())
         .add_direction(NetworkDirection::Bidirectional);
 
-    app.add_systems(Startup, scene::test.spawn());
+    app.add_plugins(BlockoutPlugin)
+        .add_systems(Startup, scene::test.spawn());
 }
 
 pub struct Channel;

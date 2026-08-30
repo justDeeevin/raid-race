@@ -3,10 +3,22 @@ use crate::{
     system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_HEIGHT, PLAYER_RADIUS},
 };
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{pbr::ExtendedMaterial, prelude::*};
+use bevy_blockout::BlockoutMaterialExt;
 
 #[derive(Component, FromTemplate)]
 pub struct Dummy;
+
+fn block_material() -> impl Scene {
+    bsn! {
+        MeshMaterial3d::<ExtendedMaterial<StandardMaterial, BlockoutMaterialExt>>(
+            asset_value(ExtendedMaterial {
+                base: StandardMaterial::from_color(Color::WHITE),
+                extension: BlockoutMaterialExt::default(),
+            }
+        ))
+    }
+}
 
 pub fn test() -> impl SceneList {
     bsn_list![
@@ -15,7 +27,7 @@ pub fn test() -> impl SceneList {
             template_value(RigidBody::Static)
             Collider::cuboid(100.0, 1.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 1.0, 100.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            block_material()
             Friction::new(3.0)
         ),
         (
@@ -24,7 +36,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(0.0, 0.5, -50.0)
             Collider::cuboid(100.0, 4.0, 1.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            block_material()
         ),
         (
             #RightWall
@@ -32,7 +44,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(50.0, 0.5, 0.0)
             Collider::cuboid(1.0, 4.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            block_material()
         ),
         (
             #BackWall
@@ -40,15 +52,15 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(0.0, 0.5, 50.0)
             Collider::cuboid(100.0, 4.0, 1.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            block_material()
         ),
         (
             #LeftWall
             template_value(RigidBody::Static)
+            Position::from_xyz(-50.0, 0.5, 0.0)
             Collider::cuboid(1.0, 4.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-            Position::from_xyz(-50.0, 0.5, 0.0)
+            block_material()
         ),
         (
             PointLight {
