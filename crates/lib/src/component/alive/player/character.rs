@@ -20,7 +20,7 @@ impl Character {
 
         let abilities = [
             AbilityId::Strike,
-            AbilityId::StrikeCombo,
+            AbilityId::Leap,
             AbilityId::Spin,
             AbilityId::Meditate,
             AbilityId::Kick,

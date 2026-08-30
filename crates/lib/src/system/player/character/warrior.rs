@@ -122,7 +122,15 @@ abilities! {
             }
         },
         cooldown: Duration::from_secs(10),
-    }
+    },
+    Leap {
+        cast: (event, mut params| Query<(&Rotation, &mut LinearVelocity)>) {
+            if let Ok((rotation, mut velocity)) = params.get_mut(**event) {
+                **velocity += **rotation * Vector::new(0.0, 6.0, -8.0);
+            }
+        },
+        cooldown: Duration::from_secs(10),
+    },
 }
 
 fn strike_bonus(
