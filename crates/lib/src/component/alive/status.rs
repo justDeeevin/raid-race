@@ -59,7 +59,7 @@ pub struct Blind(pub Timer);
 #[derive(Serialize, Deserialize)]
 pub struct StackableStatusEffect {
     pub stacks: NonZero<u8>,
-    timer: Timer,
+    pub timer: Timer,
 }
 
 impl StackableStatusEffect {
@@ -68,14 +68,6 @@ impl StackableStatusEffect {
             stacks,
             timer: Timer::new(duration, TimerMode::Once),
         }
-    }
-
-    pub fn tick(&mut self, time: Duration) {
-        self.timer.tick(time);
-    }
-
-    pub fn timer(&self) -> &Timer {
-        &self.timer
     }
 }
 

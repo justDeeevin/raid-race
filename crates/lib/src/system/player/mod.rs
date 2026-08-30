@@ -18,9 +18,12 @@ use avian3d::{
     prelude::*,
 };
 use bevy::prelude::*;
-use bevy_enhanced_input::action::{
-    InputAction,
-    events::{Fire, Start},
+use bevy_enhanced_input::{
+    action::{
+        InputAction,
+        events::{Fire, Start},
+    },
+    context::ContextActivity,
 };
 use either::Either;
 
@@ -190,17 +193,41 @@ fn ability<const N: usize>(
 ) where
     Ability<N>: InputAction,
 {
-    if let Ok((abilities, mut cooldowns)) = characters.get_mut(event.context) {
+    if let Ok((character, mut cooldowns)) = characters.get_mut(event.context) {
         match cooldowns.get_mut(N - 1) {
             Some(Either::Left(timer)) if timer.is_finished() => {
                 timer.reset();
-                abilities.trigger::<N>(event.context, &mut commands);
+                character.data.trigger::<N>(event.context, &mut commands);
             }
             Some(Either::Right(ready)) if *ready => {
                 *ready = false;
-                abilities.trigger::<N>(event.context, &mut commands);
+                character.data.trigger::<N>(event.context, &mut commands);
             }
             Some(_) | None => {}
+        }
+    }
+}
+
+fn channel(
+    characters: Query<(Entity, &mut Character, Option<&Player>)>,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    for (entity, mut character, player) in characters {
+        if let Some(timer) = &mut character.channel {
+            if timer.elapsed().is_zero() && player.is_some() {
+                timer.tick(time.delta());
+                commands
+                    .entity(entity)
+                    .insert(ContextActivity::<Player>::INACTIVE);
+            } else if timer.tick(time.delta()).is_finished() {
+                character.channel = None;
+                if player.is_some() {
+                    commands
+                        .entity(entity)
+                        .insert(ContextActivity::<Player>::ACTIVE);
+                }
+            }
         }
     }
 }
@@ -208,7 +235,7 @@ fn ability<const N: usize>(
 pub fn plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (grounded, dummy, ability_cooldown, attack_cooldown),
+        (grounded, dummy, ability_cooldown, attack_cooldown, channel),
     )
     .add_observer(walk)
     .add_observer(jump)

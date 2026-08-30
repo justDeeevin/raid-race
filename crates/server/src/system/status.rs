@@ -12,9 +12,8 @@ fn poison(
 ) {
     for (entity, mut health, mut poison) in afflicted {
         poison.tick.tick(time.delta());
-        poison.total.tick(time.delta());
 
-        if poison.total.is_finished() {
+        if poison.total.tick(time.delta()).is_finished() {
             commands.entity(entity).remove::<Poison>();
         } else if poison.tick.just_finished() {
             health.current = health.current.saturating_sub(poison.tick_damage(damagers));
@@ -30,8 +29,7 @@ fn stat_change<
     effects: Query<(Entity, &mut T)>,
 ) {
     for (entity, mut effect) in effects {
-        effect.tick(time.delta());
-        if effect.timer().is_finished() {
+        if effect.timer.tick(time.delta()).is_finished() {
             commands.entity(entity).remove::<T>();
         }
     }

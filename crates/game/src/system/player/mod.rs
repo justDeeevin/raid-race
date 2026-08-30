@@ -171,6 +171,8 @@ fn spawn(
     mut commands: Commands,
     camera: Query<Entity, With<AimCamera>>,
 ) {
+    const NOSE_LENGTH: f32 = PLAYER_RADIUS as f32 * 1.5;
+
     commands
         .entity(event.entity)
         .apply_scene(bsn!(
@@ -182,9 +184,9 @@ fn spawn(
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
             ContextActivity::<Player>::INACTIVE
             Children [
-                Mesh3d(asset_value(Cuboid::new(0.1, 0.1, 0.5)))
+                Mesh3d(asset_value(Cuboid::new(0.1, 0.1, NOSE_LENGTH)))
                 MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-                Transform::from_xyz(0.0, 0.6, -0.5)
+                Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH as f32 / 2.0, -NOSE_LENGTH)
             ]
         ))
         .insert(physics_components());

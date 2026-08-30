@@ -8,27 +8,13 @@ use strum::{EnumDiscriminants, EnumString};
 
 pub type Abilities<T> = [T; N_ABILITIES];
 
-#[derive(Component, Serialize, Deserialize, EnumDiscriminants)]
-#[strum_discriminants(derive(EnumString, ValueEnum), name(CharacterName))]
-pub enum Character {
-    Warrior {
-        abilities: Abilities<warrior::AbilityId>,
-        strike_bonus_percent: u8,
-        combo_window: Option<Timer>,
-        combo_slot: Option<usize>,
-        strike: bool,
-        combo: u8,
-        spin_timer: Option<(usize, Timer)>,
-    },
+#[derive(Component, Serialize, Deserialize)]
+pub struct Character {
+    pub data: CharacterData,
+    pub channel: Option<Timer>,
 }
 
 impl Character {
-    pub fn trigger<const N: usize>(&self, entity: Entity, commands: &mut Commands) {
-        match self {
-            Self::Warrior { abilities, .. } => abilities[N - 1].trigger(entity, commands),
-        }
-    }
-
     pub fn warrior(strike_bonus_percent: u8) -> (Self, Abilities<warrior::AbilityId>) {
         use warrior::AbilityId;
 
@@ -36,22 +22,49 @@ impl Character {
             AbilityId::Strike,
             AbilityId::StrikeCombo,
             AbilityId::Spin,
-            AbilityId::Strike,
+            AbilityId::Meditate,
             AbilityId::Strike,
         ];
 
         (
-            Self::Warrior {
-                strike_bonus_percent,
-                abilities,
-                combo_window: None,
-                combo_slot: Some(2),
-                strike: false,
-                combo: 0,
-                spin_timer: None,
+            Self {
+                data: CharacterData::Warrior {
+                    strike_bonus_percent,
+                    abilities,
+                    combo_window: None,
+                    combo_slot: Some(2),
+                    strike: false,
+                    combo: 0,
+                    spin: None,
+                    meditate: None,
+                },
+                channel: None,
             },
             abilities,
         )
+    }
+}
+
+#[derive(Component, Serialize, Deserialize, EnumDiscriminants)]
+#[strum_discriminants(derive(EnumString, ValueEnum), name(CharacterName))]
+pub enum CharacterData {
+    Warrior {
+        abilities: Abilities<warrior::AbilityId>,
+        strike_bonus_percent: u8,
+        combo_window: Option<Timer>,
+        combo_slot: Option<usize>,
+        strike: bool,
+        combo: u8,
+        spin: Option<(usize, Timer)>,
+        meditate: Option<Timer>,
+    },
+}
+
+impl CharacterData {
+    pub fn trigger<const N: usize>(&self, entity: Entity, commands: &mut Commands) {
+        match self {
+            Self::Warrior { abilities, .. } => abilities[N - 1].trigger(entity, commands),
+        }
     }
 }
 

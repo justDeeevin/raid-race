@@ -4,7 +4,7 @@ use raid_race_lib::{
     component::alive::{
         Cdr, Health, Id,
         player::{
-            character::{Character, CharacterName, Cooldowns},
+            character::{Character, CharacterData, CharacterName, Cooldowns},
             weapon::{HeldWeapon, Weapon},
         },
         status::Poison,
@@ -158,8 +158,8 @@ fn slot(event: On<SlotCommand>, mut warriors: Query<(&Id, &mut Character)>) {
         return;
     };
 
-    match character.as_mut() {
-        Character::Warrior {
+    match &mut character.data {
+        CharacterData::Warrior {
             abilities,
             combo_slot,
             ..

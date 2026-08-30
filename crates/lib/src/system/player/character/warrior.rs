@@ -3,7 +3,7 @@ use crate::{
         Dps, Health,
         player::{
             AttackCooldown,
-            character::{Character, Cooldowns},
+            character::{Character, CharacterData, Cooldowns},
         },
     },
     event::{Attacked, Hit},
@@ -23,7 +23,12 @@ abilities!(warrior {
             const COMBO_WINDOW: Duration = Duration::from_secs(3);
 
             if let Ok((mut timer, mut character, mut cooldowns)) = params.get_mut(**event)
-                && let Character::Warrior {strike, combo_window, combo_slot, ..} = character.as_mut()
+                && let CharacterData::Warrior {
+                    strike,
+                    combo_window,
+                    combo_slot,
+                    ..
+                } = &mut character.data
             {
                 timer.finish();
                 *combo_window = Some(Timer::new(COMBO_WINDOW, TimerMode::Once));
@@ -42,7 +47,7 @@ abilities!(warrior {
     StrikeCombo {
         cast: (event, mut params| Query<(&mut AttackCooldown, &mut Character)>, mut commands| Commands) {
             if let Ok((mut timer, mut character)) = params.get_mut(**event)
-                && let Character::Warrior {combo_window, combo, ..} = character.as_mut()
+                && let CharacterData::Warrior { combo_window, combo, .. } = &mut character.data
                 && let Some(window) = &combo_window
                 && !window.is_finished()
             {
@@ -58,10 +63,32 @@ abilities!(warrior {
         cast: (event, mut characters| Query<&mut Character>) {
             const SPIN_DURATION: Duration = Duration::from_secs(1);
 
-            if let Ok(mut character) = characters.get_mut(**event) && let Character::Warrior {spin_timer, ..} = character.as_mut() {
+            if let Ok(mut character) = characters.get_mut(**event)
+                && let CharacterData::Warrior { spin, .. } = &mut character.data
+            {
                 let mut timer = Timer::new(SPIN_DURATION / 5, TimerMode::Repeating);
                 timer.finish();
-                *spin_timer = Some((0, timer));
+                *spin = Some((0, timer));
+            }
+        },
+        cooldown: Duration::from_secs(10),
+    },
+    Meditate {
+        cast: (event, mut characters| Query<&mut Character>) {
+            const CHANNEL_DURATION: Duration = Duration::from_millis(2500);
+            const N_TICKS: u32 = 5;
+
+            if let Ok(mut character) = characters.get_mut(**event)
+            {
+                let prev = character.channel.take();
+
+                character.channel = Some(Timer::new(CHANNEL_DURATION, TimerMode::Once));
+
+                if let CharacterData::Warrior { meditate, .. } = &mut character.data {
+                    *meditate = Some(Timer::new(CHANNEL_DURATION / N_TICKS, TimerMode::Repeating))
+                } else {
+                    character.channel = prev;
+                }
             }
         },
         cooldown: Duration::from_secs(10),
@@ -75,12 +102,12 @@ fn strike_bonus(
     mut commands: Commands,
 ) {
     if let Ok((mut character, Dps(dps))) = characters.get_mut(event.source)
-        && let Character::Warrior {
+        && let CharacterData::Warrior {
             strike,
             combo,
             strike_bonus_percent,
             ..
-        } = character.as_mut()
+        } = &mut character.data
         && let Ok(mut target) = target.get_mut(event.target)
     {
         if *strike || *combo > 0 {
@@ -102,20 +129,17 @@ fn strike_bonus(
 
 fn combo_window(warriors: Query<(&mut Character, &mut Cooldowns)>, time: Res<Time>) {
     for (mut character, mut cooldowns) in warriors {
-        if let Character::Warrior {
+        if let CharacterData::Warrior {
             combo_window,
             combo_slot,
             ..
-        } = character.as_mut()
+        } = &mut character.data
             && let Some(timer) = combo_window
+            && timer.tick(time.delta()).is_finished()
+            && let Some(slot) = combo_slot
+            && let Some(Either::Right(ready)) = cooldowns.get_mut(*slot - 1)
         {
-            timer.tick(time.delta());
-            if timer.is_finished()
-                && let Some(slot) = combo_slot
-                && let Some(Either::Right(ready)) = cooldowns.get_mut(*slot - 1)
-            {
-                *ready = false;
-            }
+            *ready = false;
         }
     }
 }
@@ -131,7 +155,10 @@ fn spin(
     const DAMAGE_MULTIPLIER: f32 = 2.0;
 
     for (entity, mut character, position, dps) in characters {
-        let Character::Warrior { spin_timer, .. } = character.as_mut() else {
+        let CharacterData::Warrior {
+            spin: spin_timer, ..
+        } = &mut character.data
+        else {
             continue;
         };
 
@@ -162,8 +189,29 @@ fn spin(
     }
 }
 
+fn meditate(characters: Query<(&mut Character, &mut Health)>, time: Res<Time>) {
+    const HEAL_PERCENT_PER_TICK: u8 = 2;
+
+    for (mut character, mut health) in characters {
+        let finished = character.channel.as_ref().is_none_or(Timer::is_finished);
+
+        if let CharacterData::Warrior { meditate, .. } = &mut character.data {
+            if finished && meditate.is_some() {
+                *meditate = None;
+            } else if let Some(timer) = meditate
+                && timer.tick(time.delta()).just_finished()
+            {
+                health.current = health.cap.min(
+                    health.current
+                        + (health.cap as f32 * (HEAL_PERCENT_PER_TICK as f32 * 0.01)) as u16,
+                );
+            }
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     add_ability_systems(app);
-    app.add_systems(FixedUpdate, (combo_window, spin))
+    app.add_systems(FixedUpdate, (combo_window, spin, meditate))
         .add_observer(strike_bonus);
 }
