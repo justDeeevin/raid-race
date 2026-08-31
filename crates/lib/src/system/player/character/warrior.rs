@@ -59,6 +59,7 @@ abilities! {
                 commands.trigger(Attacked(**event));
             }
         },
+        name: "Strike Combo",
         ready: false,
     },
     Spin {
@@ -147,6 +148,7 @@ abilities! {
 
             }
         },
+        name: "Battle Trance",
         cooldown: Duration::from_secs(10),
     },
 }

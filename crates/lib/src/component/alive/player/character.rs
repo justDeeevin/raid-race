@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use clap::ValueEnum;
 use either::Either;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use strum::{EnumDiscriminants, EnumString};
 
 pub type Abilities<T> = [T; N_ABILITIES];
@@ -63,9 +62,9 @@ pub enum CharacterData {
 }
 
 impl CharacterData {
-    pub fn trigger<const N: usize>(&self, entity: Entity, commands: &mut Commands) {
+    pub fn ability(&self, slot: usize) -> &dyn AbilityId {
         match self {
-            Self::Warrior { abilities, .. } => abilities[N - 1].trigger(entity, commands),
+            CharacterData::Warrior { abilities, .. } => &abilities[slot - 1],
         }
     }
 }
@@ -79,7 +78,7 @@ impl<T: AbilityId> From<&Abilities<T>> for Cooldowns {
     }
 }
 
-pub trait AbilityId {
+pub trait AbilityId: std::fmt::Display {
     fn trigger(&self, entity: Entity, commands: &mut Commands);
     fn cooldown(&self) -> Either<Timer, bool>;
 }

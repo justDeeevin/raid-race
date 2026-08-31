@@ -1,6 +1,7 @@
 macro_rules! abilities {
     ($($ability:ident {
         cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block $(,
+        name: $name:literal)? $(,
         cooldown: $cooldown:expr)? $(,
         ready: $ready:expr)? $(,)?
     }),* $(,)?) => {
@@ -13,6 +14,19 @@ macro_rules! abilities {
                 fn cast($event: ::bevy::ecs::observer::On<$crate::event::Cast::<$ability>>, $($param: $type),*) $body
             }
         )*
+
+        impl ::std::fmt::Display for AbilityId {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let name = match self {$(
+                    Self::$ability => {
+                        stringify!($ability) $(;
+                        $name)?
+                    }),*
+                };
+
+                write!(f, "{name}")
+            }
+        }
 
         impl $crate::component::alive::player::character::AbilityId for AbilityId {
             fn trigger(&self, entity: ::bevy::ecs::entity::Entity, commands: &mut ::bevy::ecs::system::Commands) {

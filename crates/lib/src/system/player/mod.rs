@@ -195,11 +195,17 @@ fn ability<const N: usize>(
         match cooldowns.get_mut(N - 1) {
             Some(Either::Left(timer)) if timer.is_finished() => {
                 timer.reset();
-                character.data.trigger::<N>(event.context, &mut commands);
+                character
+                    .data
+                    .ability(N)
+                    .trigger(event.context, &mut commands);
             }
             Some(Either::Right(ready)) if *ready => {
                 *ready = false;
-                character.data.trigger::<N>(event.context, &mut commands);
+                character
+                    .data
+                    .ability(N)
+                    .trigger(event.context, &mut commands);
             }
             Some(_) | None => {}
         }

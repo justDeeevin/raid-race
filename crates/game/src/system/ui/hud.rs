@@ -28,7 +28,10 @@ use lightyear::{
 use raid_race_lib::{
     component::alive::{
         Health, Mana,
-        player::{Player, character::Cooldowns},
+        player::{
+            Player,
+            character::{Character, Cooldowns},
+        },
         status::Poison,
     },
     input,
@@ -84,23 +87,24 @@ fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>
 
 fn ability_cooldown<const N: usize>(
     hud: Query<(&mut Text, &Ability<N>)>,
-    cd: Query<&Cooldowns, With<Controlled>>,
+    cd: Query<(&Cooldowns, &Character), With<Controlled>>,
 ) where
     input::Ability<N>: InputAction,
 {
     for (mut text, Ability(target)) in hud {
-        if let Ok(cooldowns) = cd.get(*target) {
+        if let Ok((cooldowns, character)) = cd.get(*target) {
             match &cooldowns[N - 1] {
                 Either::Left(cd) => {
                     if cd.is_finished() {
-                        **text = "Ready".to_string();
+                        // FIXME: shrink text size to fit
+                        **text = character.data.ability(N).to_string();
                     } else {
                         **text = cd.remaining_secs().ceil().to_string();
                     }
                 }
                 Either::Right(ready) => {
                     if *ready {
-                        **text = "Ready".to_string();
+                        **text = character.data.ability(N).to_string();
                     } else {
                         **text = "Not ready".to_string();
                     }
@@ -247,7 +251,7 @@ fn scene(target: Entity) -> impl Scene {
 
 fn ability<const N: usize>(target: Entity) -> impl Scene
 where
-    Ability<N>: Component,
+    input::Ability<N>: InputAction,
 {
     bsn! {
         Node {
