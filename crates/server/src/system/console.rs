@@ -1,5 +1,5 @@
 use bevy::{platform::cell::SyncCell, prelude::*};
-use clap::{Args, Parser, error::ErrorKind};
+use clap::{ArgAction, Args, Parser, error::ErrorKind};
 use lightyear::{
     connection::network_target::Target, link::server::Server, prelude::ServerMultiMessageSender,
 };
@@ -13,7 +13,7 @@ use raid_race_lib::{
         },
         status::Poison,
     },
-    event::Slotted,
+    event::{NoCD, Slotted},
     system::player::character::warrior,
 };
 use rustyline::{DefaultEditor, config::Configurer, error::ReadlineError};
@@ -24,7 +24,7 @@ use std::{
 use tracing::{error, instrument};
 
 #[derive(Parser)]
-#[command(help_template = "{subcommands}")]
+#[command(help_template = "{subcommands}", rename_all = "lowercase")]
 enum Command {
     /// Apply poison.
     Poison(PoisonCommand),
@@ -42,6 +42,27 @@ enum Command {
         /// The exit code.
         code: u8,
     },
+    /// Manage no-cooldown mode.
+    NoCD {
+        #[arg(action = ArgAction::Set)]
+        /// The new value.
+        enable: Option<bool>,
+    },
+}
+
+fn no_cd(
+    event: On<NoCD>,
+    mut no_cd: ResMut<NoCD>,
+    mut tx: ServerMultiMessageSender,
+    server: Single<&Server>,
+) {
+    *no_cd = *event;
+    #[allow(
+        clippy::unwrap_used,
+        reason = "should never fail because channel is reliable"
+    )]
+    tx.send::<_, Channel>(&*event, &server, &Target::All)
+        .unwrap();
 }
 
 #[derive(Event, Args)]
@@ -50,10 +71,10 @@ struct HealthCommand {
     /// The id of the entity to choose.
     target: u64,
     #[arg(value_parser = |s: &str| if s == "max" {Ok(HealthInput::Max)} else {s.parse().map(HealthInput::Amount)})]
-    /// The target health.
+    /// The new value.
     ///
     /// Either a number or "max".
-    amount: HealthInput,
+    amount: Option<HealthInput>,
 }
 
 #[derive(Clone)]
@@ -70,12 +91,17 @@ fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
             None
         }
     }) {
-        target.current = match event.amount {
-            HealthInput::Amount(amount) => amount,
-            HealthInput::Max => target.cap,
-        };
+        match &event.amount {
+            Some(amount) => {
+                target.current = match amount {
+                    HealthInput::Amount(n) => *n,
+                    HealthInput::Max => target.cap,
+                }
+            }
+            None => info!(health = target.current),
+        }
     } else {
-        error!("target not found");
+        error!("target not found. does the entity have health?");
     }
 }
 
@@ -86,19 +112,30 @@ struct WeaponCommand {
     target: u64,
     #[arg(value_enum)]
     /// The weapon to choose.
-    weapon: Weapon,
+    weapon: Option<Weapon>,
 }
 
 #[instrument(skip_all)]
-fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
-    if let Some(player) = players.iter().find_map(|(id, entity)| {
+fn weapon(
+    event: On<WeaponCommand>,
+    players: Query<(&Id, Entity, Option<&HeldWeapon>)>,
+    mut commands: Commands,
+) {
+    if let Some((player, weapon)) = players.iter().find_map(|(id, entity, weapon)| {
         if **id == event.target {
-            Some(entity)
+            Some((entity, weapon))
         } else {
             None
         }
     }) {
-        commands.entity(player).insert(HeldWeapon(event.weapon));
+        match &event.weapon {
+            Some(weapon) => {
+                commands.entity(player).insert(HeldWeapon(*weapon));
+            }
+            None => {
+                tracing::info!(weapon = %weapon.map(|w| w.0.into()).unwrap_or("None"))
+            }
+        }
     } else {
         error!("target not found");
     }
@@ -111,14 +148,18 @@ struct CharacterCommand {
     target: u64,
     #[arg(value_enum)]
     /// The name of the character to choose.
-    character: CharacterName,
+    character: Option<CharacterName>,
 }
 
 #[instrument(skip_all)]
-fn character(event: On<CharacterCommand>, players: Query<(&Id, Entity)>, mut commands: Commands) {
-    let Some(player) = players.iter().find_map(|(id, entity)| {
+fn character(
+    event: On<CharacterCommand>,
+    players: Query<(&Id, Entity, Option<&Character>)>,
+    mut commands: Commands,
+) {
+    let Some((player, character)) = players.iter().find_map(|(id, entity, character)| {
         if **id == event.target {
-            Some(entity)
+            Some((entity, character))
         } else {
             None
         }
@@ -128,12 +169,13 @@ fn character(event: On<CharacterCommand>, players: Query<(&Id, Entity)>, mut com
     };
 
     match event.character {
-        CharacterName::Warrior => {
+        Some(CharacterName::Warrior) => {
             let (character, abilities) = Character::warrior(10);
             commands
                 .entity(player)
                 .insert((character, Cooldowns::from(&abilities)));
         }
+        None => info!(character = %character.map(|c| (&c.data).into()).unwrap_or("None"),),
     }
 }
 
@@ -143,11 +185,10 @@ struct SlotCommand {
     /// The id of the entity to choose.
     target: u64,
     #[arg()]
-    /// The name of the ability to slot.
-    ability: String,
-    #[arg()]
     /// The slot to fill.
     slot: usize,
+    /// The name of the ability to slot.
+    ability: Option<String>,
 }
 
 #[instrument(skip_all)]
@@ -164,7 +205,12 @@ fn slot(
             None
         }
     }) else {
-        error!("target not found");
+        error!("target not found. does the entity have an assigned character?");
+        return;
+    };
+
+    let Some(ability) = &event.ability else {
+        info!(ability = %character.data.ability(event.slot));
         return;
     };
 
@@ -179,7 +225,7 @@ fn slot(
                 return;
             };
 
-            if let Ok(ability) = event.ability.parse::<warrior::AbilityId>() {
+            if let Ok(ability) = ability.parse::<warrior::AbilityId>() {
                 *slot = ability;
                 if ability == warrior::AbilityId::StrikeCombo {
                     *combo_index = Some(event.slot - 1);
@@ -199,7 +245,7 @@ fn slot(
             entity,
             index: event.slot - 1,
         },
-        &*server,
+        &server,
         &Target::All,
     )
     .unwrap();
@@ -255,11 +301,11 @@ fn poison(
 
 fn thread(tx: Sender<Command>) -> impl FnOnce() {
     move || {
-        std::thread::sleep(Duration::from_millis(100));
         let mut rl = DefaultEditor::new().expect("failed to create readline");
         rl.set_auto_add_history(true);
 
         loop {
+            std::thread::sleep(Duration::from_millis(100));
             match rl.readline("$ ") {
                 Ok(line) => {
                     if !line.trim().is_empty() {
@@ -300,7 +346,9 @@ fn thread(tx: Sender<Command>) -> impl FnOnce() {
 fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
     app.add_systems(
         Update,
-        move |mut commands: Commands, mut writer: MessageWriter<AppExit>| match rx.get().try_recv()
+        move |mut commands: Commands, mut writer: MessageWriter<AppExit>, no_cd: Res<NoCD>| match rx
+            .get()
+            .try_recv()
         {
             Ok(Command::Poison(cmd)) => commands.trigger(cmd),
             Ok(Command::Slot(cmd)) => commands.trigger(cmd),
@@ -310,6 +358,10 @@ fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
             Ok(Command::Quit { code }) => {
                 writer.write(AppExit::from_code(code));
             }
+            Ok(Command::NoCD { enable }) => match enable {
+                Some(enable) => commands.trigger(NoCD(enable)),
+                None => info!(no_cd = **no_cd),
+            },
             Err(_) => {}
         },
     );
@@ -326,5 +378,6 @@ pub fn plugin(app: &mut App) {
         .add_observer(slot)
         .add_observer(weapon)
         .add_observer(health)
-        .add_observer(character);
+        .add_observer(character)
+        .add_observer(no_cd);
 }

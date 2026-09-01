@@ -360,8 +360,6 @@ fn trance(characters: Query<(&mut Character, &mut Health, &mut AttackCooldown)>,
             }
         }
     }
-
-    pub type Thing = ();
 }
 
 pub fn plugin(app: &mut App) {

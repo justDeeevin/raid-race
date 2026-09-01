@@ -135,6 +135,9 @@ pub fn plugin(app: &mut App) {
     app.register_message::<Slotted>()
         .add_direction(NetworkDirection::ServerToClient)
         .add_map_entities();
+    app.init_resource::<NoCD>()
+        .register_message::<NoCD>()
+        .add_direction(NetworkDirection::ServerToClient);
     app.add_channel::<Channel>(ChannelSettings {
         mode: ChannelMode::UnorderedReliable(Default::default()),
         ..Default::default()

@@ -26,7 +26,7 @@ use raid_race_lib::{
             character::{AbilityId, Character, CharacterData, Cooldowns},
         },
     },
-    event::Slotted,
+    event::{NoCD, Slotted},
     input::{Ability, Attack, Jump, Look, Walk},
     system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS, camera_transform, physics_components},
 };
@@ -266,6 +266,12 @@ fn slot(
     }
 }
 
+fn no_cd(mut rx: Single<&mut MessageReceiver<NoCD>>, mut no_cd: ResMut<NoCD>) {
+    for msg in rx.receive() {
+        *no_cd = msg;
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -273,6 +279,7 @@ pub fn plugin(app: &mut App) {
             orbit,
             grabber.run_if(on_message::<MouseButtonInput>.or_eager(on_message::<KeyboardInput>)),
             slot,
+            no_cd,
         ),
     )
     .add_observer(spawn)

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use clap::ValueEnum;
 use either::Either;
 use serde::{Deserialize, Serialize};
-use strum::{EnumDiscriminants, EnumString};
+use strum::{EnumDiscriminants, EnumString, IntoStaticStr};
 
 pub type Abilities<T> = [T; N_ABILITIES];
 
@@ -45,7 +45,7 @@ impl Character {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, EnumDiscriminants)]
+#[derive(Component, Serialize, Deserialize, EnumDiscriminants, IntoStaticStr)]
 #[strum_discriminants(derive(EnumString, ValueEnum), name(CharacterName))]
 pub enum CharacterData {
     Warrior {

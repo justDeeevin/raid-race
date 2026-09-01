@@ -44,3 +44,6 @@ impl MapEntities for Slotted {
         self.entity.map_entities(entity_mapper);
     }
 }
+
+#[derive(Resource, Event, Serialize, Deserialize, Deref, DerefMut, Clone, Copy, Default)]
+pub struct NoCD(pub bool);
