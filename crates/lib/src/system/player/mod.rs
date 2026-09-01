@@ -3,7 +3,7 @@ pub mod weapon;
 
 use crate::{
     component::alive::{
-        Agility, Dps, Health,
+        Agility, Defense, Dps, Health,
         player::{
             AttackCooldown, Grounded, Pitch, Player,
             character::{Character, Cooldowns},
@@ -57,8 +57,8 @@ fn walk(
         let t = forces.linear_velocity();
         Vector::new(t.x, 0.0, t.z)
     };
-    let target_velocity = move_dir.as_dvec3()
-        * (MAX_SPEED + (Agility::MOVE_SPEED_ADJUST * **agility as Scalar)).max(0.0);
+    let target_velocity =
+        move_dir.as_dvec3() * (MAX_SPEED + (Agility::SCALER * **agility as Scalar)).max(0.0);
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
 
     let required_acceleration = (new_velocity - velocity) / delta_t;
@@ -170,11 +170,18 @@ fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>) {
     }
 }
 
-fn hit(event: On<Hit>, damage: Query<(&Dps, &AttackCooldown)>, mut health: Query<&mut Health>) {
+fn hit(
+    event: On<Hit>,
+    damage: Query<(&Dps, &AttackCooldown)>,
+    mut health: Query<(&mut Health, &Defense)>,
+) {
     if let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source)
-        && let Ok(mut health) = health.get_mut(event.target)
+        && let Ok((mut health, defense)) = health.get_mut(event.target)
     {
-        *health -= (*damage as f32 * timer.duration().as_secs_f32()) as u16;
+        health.damage(
+            (*damage as f32 * timer.duration().as_secs_f32()) as u16,
+            **defense,
+        );
     }
 }
 

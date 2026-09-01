@@ -16,7 +16,6 @@ use avian3d::{
 };
 use bevy::prelude::*;
 use either::Either;
-use lightyear::{connection::network_target::Target, prelude::Replicate};
 use std::{num::NonZero, time::Duration};
 
 // TODO: LOS checks?
@@ -106,7 +105,7 @@ abilities! {
             event,
             space| SpatialQuery,
             params| Query<(&Position, &Rotation)>,
-            mut targets| Query<&mut Health, With<Agility>>,
+            mut targets| Query<(&mut Health, &Defense), With<Agility>>,
             mut commands| Commands
         ) {
             const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
@@ -126,10 +125,10 @@ abilities! {
                     **rotation,
                     &default(),
                 ) {
-                    if let Ok(mut health) = targets.get_mut(hit) {
+                    if let Ok((mut health, defense)) = targets.get_mut(hit) {
                         commands.entity(hit)
                             .insert(AgilityDown(StackableStatusEffect::new(STACKS, DURATION)));
-                        *health -= DAMAGE;
+                        health.damage(DAMAGE, **defense);
                     }
                 }
             }
@@ -229,7 +228,7 @@ abilities! {
 fn strike_bonus(
     event: On<Hit>,
     mut characters: Query<(&mut Character, &Dps)>,
-    mut target: Query<&mut Health>,
+    mut targets: Query<(&mut Health, &Defense)>,
     mut commands: Commands,
 ) {
     if let Ok((mut character, Dps(dps))) = characters.get_mut(event.source)
@@ -239,10 +238,13 @@ fn strike_bonus(
             strike_bonus_percent,
             ..
         } = &mut character.data
-        && let Ok(mut target) = target.get_mut(event.target)
+        && let Ok((mut health, defense)) = targets.get_mut(event.target)
     {
         if *strike || *combo > 0 {
-            *target -= (*dps as f32 * (*strike_bonus_percent as f32 / 100.0)) as u16;
+            health.damage(
+                (*dps as f32 * (*strike_bonus_percent as f32 / 100.0)) as u16,
+                **defense,
+            );
         }
 
         if *strike {
@@ -275,7 +277,7 @@ fn combo_window(warriors: Query<(&mut Character, &mut Cooldowns)>, time: Res<Tim
 
 fn spin(
     characters: Query<(Entity, &mut Character, &Position, &Dps)>,
-    mut healths: Query<&mut Health>,
+    mut healths: Query<(&mut Health, &Defense)>,
     space: SpatialQuery,
     time: Res<Time>,
 ) {
@@ -301,9 +303,11 @@ fn spin(
                 Quaternion::default(),
                 &SpatialQueryFilter::from_excluded_entities([entity]),
             ) {
-                if let Ok(mut health) = healths.get_mut(hit) {
-                    *health -=
-                        (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER) as u16;
+                if let Ok((mut health, defense)) = healths.get_mut(hit) {
+                    health.damage(
+                        (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER) as u16,
+                        **defense,
+                    );
                 }
             }
         }

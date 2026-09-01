@@ -15,7 +15,7 @@ fn poison(
         if poison.total.tick(time.delta()).is_finished() {
             commands.entity(entity).remove::<Poison>();
         } else if poison.tick.just_finished() {
-            *health -= poison.tick_damage(damagers);
+            health.current = health.current.saturating_sub(poison.tick_damage(damagers));
         }
     }
 }

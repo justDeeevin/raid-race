@@ -1,6 +1,8 @@
 pub mod player;
 pub mod status;
 
+use std::ops::AddAssign;
+
 use avian3d::math::Scalar;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -11,21 +13,29 @@ use serde::{Deserialize, Serialize};
 pub struct Id(pub u64);
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut, Clone, Default)]
+/// # Changing health
+///
+/// Generally, healing should be done with the [`AddAssign`] impl (e.g. `health += 10`), which
+/// prevents overheal. Damage should be done with the [`damage`](Self::damage) method, which handles
+/// defense considerations.
+///
+/// Both of these _can_ be sidestepped by directly accessing the inner [`Meter`], but this should be
+/// avoided unless strictly necessary (e.g. true damage or overheal).
 pub struct Health(pub Meter);
 
 impl Health {
     pub fn new(cap: u16) -> Self {
         Self(Meter::new(cap))
     }
-}
 
-impl std::ops::SubAssign<u16> for Health {
-    fn sub_assign(&mut self, rhs: u16) {
-        self.current = self.current.saturating_sub(rhs);
+    pub fn damage(&mut self, damage: u16, defense: i16) {
+        self.current = self.current.saturating_sub(
+            (damage as f32 * (1.0 - (Defense::DELTA * defense as f32)).max(0.0)) as u16,
+        );
     }
 }
 
-impl std::ops::AddAssign<u16> for Health {
+impl AddAssign<u16> for Health {
     fn add_assign(&mut self, rhs: u16) {
         self.current = self.cap.min(self.current + rhs);
     }
@@ -33,6 +43,12 @@ impl std::ops::AddAssign<u16> for Health {
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
 pub struct Mana(pub Meter);
+
+impl AddAssign<u16> for Mana {
+    fn add_assign(&mut self, rhs: u16) {
+        self.current = self.cap.min(self.current + rhs);
+    }
+}
 
 impl Mana {
     pub fn new(cap: u16) -> Self {
@@ -50,7 +66,7 @@ pub struct Dps(pub u16);
 pub struct Agility(pub i16);
 
 impl Agility {
-    pub const MOVE_SPEED_ADJUST: Scalar = 0.1;
+    pub const SCALER: Scalar = 0.1;
 }
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
@@ -76,6 +92,10 @@ impl Cdr {
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
 pub struct Defense(pub i16);
+
+impl Defense {
+    pub const DELTA: f32 = 0.1;
+}
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
 /// A percent between 0 and 100
