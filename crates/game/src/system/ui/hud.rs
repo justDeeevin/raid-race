@@ -12,8 +12,11 @@ use bevy::{
         observer::On,
         query::{Changed, With},
         system::{Commands, Query, Single},
+        template::FromTemplate,
         world::Ref,
     },
+    picking::events::{Enter, Leave, Pointer},
+    prelude::Deref,
     scene::{CommandsSceneExt, Scene, bsn},
     text::{FontSize, Justify, TextColor, TextFont, TextLayout},
     ui::{
@@ -87,7 +90,7 @@ fn mana_bar(bar: Query<(&mut Node, &ManaBar, &mut Text)>, mana: Query<Ref<Mana>>
 
 fn ability_cooldown<const N: usize>(
     hud: Query<(&mut Text, &Ability<N>)>,
-    cd: Query<(&Cooldowns, &Character), With<Controlled>>,
+    cd: Query<(&Cooldowns, &Character), (With<Controlled>, Changed<Cooldowns>)>,
 ) where
     input::Ability<N>: InputAction,
 {
@@ -110,6 +113,52 @@ fn ability_cooldown<const N: usize>(
                     }
                 }
             }
+        }
+    }
+}
+
+fn ability_description_popup(
+    event: On<Pointer<Enter>>,
+    boxes: Query<&Children>,
+    abilities: Query<&Description>,
+    mut descriptions: Query<&mut Node>,
+) {
+    if let Ok(children) = boxes.get(event.entity)
+        && let Some(child) = children.first()
+        && let Ok(Description(entity)) = abilities.get(*child)
+        && let Ok(mut node) = descriptions.get_mut(*entity)
+    {
+        node.display = Display::Flex;
+    }
+}
+
+fn ability_description_popup_exit(
+    event: On<Pointer<Leave>>,
+    boxes: Query<&Children>,
+    abilities: Query<&Description>,
+    mut descriptions: Query<&mut Node>,
+) {
+    if let Ok(children) = boxes.get(event.entity)
+        && let Some(child) = children.first()
+        && let Ok(Description(entity)) = abilities.get(*child)
+        && let Ok(mut node) = descriptions.get_mut(*entity)
+    {
+        node.display = Display::None;
+    }
+}
+
+fn ability_description<const N: usize>(
+    abilities: Query<(&Ability<N>, &Description)>,
+    mut descriptions: Query<&mut Text>,
+    characters: Query<&Character, Changed<Character>>,
+) where
+    input::Ability<N>: InputAction,
+{
+    for (Ability(target), Description(entity)) in abilities {
+        if let Ok(character) = characters.get(*target)
+            && let Ok(mut text) = descriptions.get_mut(*entity)
+        {
+            **text = character.data.ability(N).description();
         }
     }
 }
@@ -232,7 +281,6 @@ fn scene(target: Entity) -> impl Scene {
                         Node {
                             grid_column: GridPlacement::start(2),
                             justify_content: JustifyContent::Center,
-                            align_items: AlignItems::End,
                             column_gap: px(10),
                         }
                         Children [
@@ -249,25 +297,63 @@ fn scene(target: Entity) -> impl Scene {
     }
 }
 
+#[derive(Component, Deref, FromTemplate)]
+#[relationship_target(relationship = DescriptionOf)]
+struct Description(Entity);
+
+#[derive(Component, Deref, FromTemplate)]
+#[relationship(relationship_target = Description)]
+struct DescriptionOf(Entity);
+
 fn ability<const N: usize>(target: Entity) -> impl Scene
 where
     input::Ability<N>: InputAction,
 {
+    let font_size = px(15);
+
     bsn! {
         Node {
-            height: px(100),
-            width: px(100),
-            border: UiRect::all(px(4)),
+            width: percent(100),
+            height: percent(100),
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::End,
             align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
         }
-        BackgroundColor(Color::WHITE)
-        BorderColor::all(Color::BLACK)
         Children [
-            Ability::<N>(target)
-            Text
-            TextLayout::justify(Justify::Center)
-            TextColor(Color::BLACK)
+            (
+                #Description
+                Node {
+                    padding: UiRect::all(font_size * 0.75),
+                    display: Display::None
+                }
+                BackgroundColor(Color::BLACK)
+                Text
+                TextLayout::justify(Justify::Center)
+                TextFont {
+                    font_size,
+                }
+                TextColor(Color::WHITE)
+                DescriptionOf(#Ability)
+            ),
+            (
+                Node {
+                    height: px(100),
+                    width: px(100),
+                    border: UiRect::all(px(4)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                }
+                BackgroundColor(Color::WHITE)
+                BorderColor::all(Color::BLACK)
+                Description(#Description)
+                Children [
+                    #Ability
+                    Ability::<N>(target)
+                    Text
+                    TextLayout::justify(Justify::Center)
+                    TextColor(Color::BLACK)
+                ]
+            ),
         ]
     }
 }
@@ -283,10 +369,17 @@ pub fn plugin(app: &mut App) {
             ability_cooldown::<3>,
             ability_cooldown::<4>,
             ability_cooldown::<5>,
+            ability_description::<1>,
+            ability_description::<2>,
+            ability_description::<3>,
+            ability_description::<4>,
+            ability_description::<5>,
         ),
     )
     .add_observer(spawn)
     .add_observer(despawn)
     .add_observer(add_poison)
-    .add_observer(remove_poison);
+    .add_observer(remove_poison)
+    .add_observer(ability_description_popup)
+    .add_observer(ability_description_popup_exit);
 }
