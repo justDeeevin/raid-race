@@ -10,7 +10,7 @@ edition = "2024"
 [workspace.dependencies]
 raid-race-lib = { path = "crates/lib", version = "0.1.0" }
 tracing = "0.1.44"
-bevy = { version = "0.19.0", default-features = false, features = [
+bevy = { version = "0.19.1", default-features = false, features = [
 	"bevy_asset",
 	"bevy_color",
 	"bevy_mesh",
@@ -25,7 +25,7 @@ avian3d = { version = "0.7.0", default-features = false, features = [
 	"parry-f64",
 	"xpbd_joints",
 ] }
-lightyear = { version = "0.29.0", default-features = false, features = [
+lightyear = { version = "0.30.1", default-features = false, features = [
 	"replication",
 	"avian3d",
 	"webtransport",
@@ -38,7 +38,7 @@ async-h1 = "2.3.4"
 http-types = "2.12.0"
 serde = { version = "1.0.229", features = ["derive"] }
 either = { version = "1.18.0", features = ["serde"] }
-rand = "0.10.2"
+rand = "0.10.3"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"

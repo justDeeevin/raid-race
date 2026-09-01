@@ -177,25 +177,25 @@ fn spawn(
 ) {
     const NOSE_LENGTH: f32 = PLAYER_RADIUS as f32 * 1.5;
 
-    commands
-        .entity(event.entity)
-        .apply_scene(bsn! {
-            #Player
-            Mesh3d(asset_value(Capsule3d::new(
-                PLAYER_RADIUS as f32,
-                PLAYER_CAPSULE_LENGTH as f32,
-            )))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
-            ContextActivity::<Player>::INACTIVE
-            Children [
-                Mesh3d(asset_value(Cuboid::new(0.1, 0.1, NOSE_LENGTH)))
-                MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-                Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH as f32 / 2.0, -NOSE_LENGTH)
-            ]
-        })
-        .insert(physics_components());
+    let mut cmds = commands.entity(event.entity);
+
+    cmds.apply_scene(bsn! {
+        #Player
+        Mesh3d(asset_value(Capsule3d::new(
+            PLAYER_RADIUS as f32,
+            PLAYER_CAPSULE_LENGTH as f32,
+        )))
+        MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
+        ContextActivity::<Player>::INACTIVE
+        Children [
+            Mesh3d(asset_value(Cuboid::new(0.1, 0.1, NOSE_LENGTH)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH as f32 / 2.0, -NOSE_LENGTH)
+        ]
+    });
 
     if controlled.get(event.entity).is_ok() {
+        cmds.insert(physics_components());
         // TODO: this should just be a resource
         commands
             .entity(camera.single().expect("multiple aim cameras"))

@@ -35,17 +35,17 @@ pub const PLAYER_RADIUS: Scalar = PLAYER_HEIGHT / 8.0;
 
 fn walk(
     event: On<Fire<Walk>>,
-    mut params: Query<(&ComputedMass, &Transform, &Agility, Forces)>,
+    mut params: Query<(&ComputedMass, &Rotation, &Agility, Forces)>,
     time: Res<Time>,
 ) {
     const MAX_SPEED: Scalar = 5.0;
     const MAX_ACCELERATION: Scalar = 40.0;
 
-    let Ok((mass, transform, agility, mut forces)) = params.get_mut(event.context) else {
+    let Ok((mass, rotation, agility, mut forces)) = params.get_mut(event.context) else {
         return;
     };
     let Ok(move_dir) =
-        Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| transform.rotation * d)
+        Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| rotation * d)
     else {
         return;
     };

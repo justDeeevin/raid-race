@@ -5,9 +5,9 @@ edition.workspace = true
 
 [dependencies]
 raid-race-lib.workspace = true
-reqwest = "0.13.4"
+reqwest = "0.13.5"
 bytes = "1.12.1"
-lightyear_netcode = "0.29.0"
+lightyear_netcode = "0.30.1"
 hakari = { version = "0.1", path = "../hakari" }
 futures.workspace = true
 axum = { version = "0.8.9", default-features = false, features = [
