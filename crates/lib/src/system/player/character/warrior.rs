@@ -11,7 +11,7 @@ use crate::{
     system::player::{PLAYER_HEIGHT, PLAYER_RADIUS},
 };
 use avian3d::{
-    math::{Quaternion, Scalar, Vector},
+    math::{RVector, Real},
     prelude::*,
 };
 use bevy::prelude::*;
@@ -116,16 +116,16 @@ abilities! {
             const AGILITY_DOWN_STACKS: NonZero<u8> = NonZero::new(40).unwrap();
             const DEBUFF_DURATION: Duration = Duration::from_secs(5);
             const DAMAGE: u16 = 6;
-            const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
+            const HITBOX_DIMENSIONS: Vec3 = Vec3::new(0.5, 0.1, 0.25);
 
             if let Ok((position, rotation)) = params.get(**event) {
                 for hit in space.shape_intersections(
                     &Collider::cuboid(HITBOX_DIMENSIONS.x, HITBOX_DIMENSIONS.y, HITBOX_DIMENSIONS.z),
-                    **position + (**rotation * Vector::new(
+                    **position + (**rotation * Vec3::new(
                         0.0,
                         (-PLAYER_HEIGHT / 2.0) + (HITBOX_DIMENSIONS.y / 2.0),
                         -PLAYER_RADIUS - (HITBOX_DIMENSIONS.z / 2.0),
-                    )),
+                    )).as_dvec3(),
                     **rotation,
                     &SpatialQueryFilter::from_excluded_entities([**event]),
                 ) {
@@ -145,7 +145,7 @@ abilities! {
     Leap {
         cast: (event, mut params| Query<(&Rotation, &mut LinearVelocity)>) {
             if let Ok((rotation, mut velocity)) = params.get_mut(**event) {
-                **velocity += **rotation * Vector::new(0.0, 6.0, -8.0);
+                **velocity += **rotation * Vec3::new(0.0, 6.0, -8.0);
             }
         },
         description: "Leap into the air.",
@@ -188,33 +188,33 @@ abilities! {
         ) {
             const DEBUFF_DURATION: Duration = Duration::from_secs(2);
 
-            const START_WIDTH: Scalar = 1.0;
-            const END_WIDTH: Scalar = 1.0;
-            const LENGTH: Scalar = 1.0;
-            const HEIGHT: Scalar= 1.0;
+            const START_WIDTH: Real = 1.0;
+            const END_WIDTH: Real = 1.0;
+            const LENGTH: Real = 1.0;
+            const HEIGHT: Real= 1.0;
 
             #[allow(clippy::unwrap_used, reason = "static definition")]
-            let collider = Collider::convex_hull(vec![
-                Vector::new(-START_WIDTH / 2.0, 0.0, 0.0),
-                Vector::new(-END_WIDTH / 2.0, 0.0, -LENGTH),
-                Vector::new(END_WIDTH / 2.0, 0.0, -LENGTH),
-                Vector::new(START_WIDTH / 2.0, 0.0, 0.0),
-                Vector::new(-START_WIDTH / 2.0, HEIGHT, 0.0),
-                Vector::new(-END_WIDTH / 2.0, HEIGHT, -LENGTH),
-                Vector::new(END_WIDTH / 2.0, HEIGHT, -LENGTH),
-                Vector::new(START_WIDTH / 2.0, HEIGHT, 0.0),
+            let collider = Collider::convex_hull(&[
+                RVector::new(-START_WIDTH / 2.0, 0.0, 0.0),
+                RVector::new(-END_WIDTH / 2.0, 0.0, -LENGTH),
+                RVector::new(END_WIDTH / 2.0, 0.0, -LENGTH),
+                RVector::new(START_WIDTH / 2.0, 0.0, 0.0),
+                RVector::new(-START_WIDTH / 2.0, HEIGHT, 0.0),
+                RVector::new(-END_WIDTH / 2.0, HEIGHT, -LENGTH),
+                RVector::new(END_WIDTH / 2.0, HEIGHT, -LENGTH),
+                RVector::new(START_WIDTH / 2.0, HEIGHT, 0.0),
             ]).unwrap();
 
             if let Ok((position, rotation)) = sources.get(**event) {
                 commands.spawn((
                     collider.clone(),
-                    Position(**position + (**rotation * Vector::new(0.0, 0.0, -PLAYER_RADIUS))),
+                    Position(**position + (**rotation * Vec3::new(0.0, 0.0, -PLAYER_RADIUS)).as_dvec3()),
                     *rotation,
                 ));
 
                 for hit in space.shape_intersections(
                     &collider,
-                    **position + (**rotation * Vector::new(0.0, -HEIGHT / 2.0, -PLAYER_RADIUS)),
+                    **position + (**rotation * Vec3::new(0.0, -HEIGHT as f32 / 2.0, -PLAYER_RADIUS)).as_dvec3(),
                     **rotation,
                     &SpatialQueryFilter::from_excluded_entities([**event]),
                 ) {
@@ -236,12 +236,12 @@ abilities! {
     Slash {
         cast: (event, sources| Query<(&Position, &Rotation)>, mut targets| Query<(&mut Health, Option<&Defense>)>, space| SpatialQuery) {
             const DAMAGE: u16 = 6;
-            const HITBOX_DIMENSIONS: Vector = Vector::new(0.1, 1.0, 1.0);
+            const HITBOX_DIMENSIONS: Vec3 = Vec3::new(0.1, 1.0, 1.0);
 
             if let Ok((position, rotation)) = sources.get(**event) {
                 for hit in space.shape_intersections(
                     &Collider::cuboid(HITBOX_DIMENSIONS.x, HITBOX_DIMENSIONS.y, HITBOX_DIMENSIONS.z),
-                    **position + (**rotation * Vector::NEG_Z * ((HITBOX_DIMENSIONS.z / 2.0) + PLAYER_RADIUS)),
+                    **position + (**rotation * Vec3::NEG_Z * ((HITBOX_DIMENSIONS.z / 2.0) + PLAYER_RADIUS)).as_dvec3(),
                     **rotation,
                     &SpatialQueryFilter::from_excluded_entities([**event]),
                 ) {
@@ -312,8 +312,8 @@ fn spin(
     space: SpatialQuery,
     time: Res<Time>,
 ) {
-    const AOE_RADIUS: Scalar = 3.0;
-    const AOE_HEIGHT: Scalar = PLAYER_HEIGHT;
+    const AOE_RADIUS: f32 = 3.0;
+    const AOE_HEIGHT: f32 = PLAYER_HEIGHT;
     const DAMAGE_MULTIPLIER: f32 = 2.0;
 
     for (entity, mut character, position, dps) in characters {
@@ -331,7 +331,7 @@ fn spin(
             for hit in space.shape_intersections(
                 &Collider::cylinder(AOE_RADIUS, AOE_HEIGHT),
                 **position,
-                Quaternion::default(),
+                Quat::default(),
                 &SpatialQueryFilter::from_excluded_entities([entity]),
             ) {
                 if let Ok((mut health, defense)) = healths.get_mut(hit) {

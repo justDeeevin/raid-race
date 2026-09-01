@@ -28,10 +28,10 @@ fn alert_attack(
     }
 }
 
-fn spawn_visual(event: On<Add, Player>, args: Res<Args>, mut commands: Commands) {
+fn spawn_visual(event: On<Add<Player>>, args: Res<Args>, mut commands: Commands) {
     if args.visual {
         commands.entity(event.entity).apply_scene(bsn! {
-            Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS as f32, PLAYER_CAPSULE_LENGTH as f32)))
+            Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH)))
             MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
         });
     }

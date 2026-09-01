@@ -5,9 +5,9 @@ edition.workspace = true
 
 [dependencies]
 raid-race-lib.workspace = true
-reqwest = "0.13.4"
+reqwest = "0.13.5"
 bytes = "1.12.1"
-lightyear_netcode = "0.29.0"
+lightyear_netcode = "0.31.0"
 hakari = { version = "0.1", path = "../hakari" }
 futures.workspace = true
 axum = { version = "0.8.9", default-features = false, features = [
@@ -15,7 +15,7 @@ axum = { version = "0.8.9", default-features = false, features = [
 	"tokio",
 	"query",
 ] }
-tokio = { version = "1.53.1", features = ["net", "macros", "rt-multi-thread"] }
+tokio = { version = "1.54.0", features = ["net", "macros", "rt-multi-thread"] }
 
 [lints]
 workspace = true

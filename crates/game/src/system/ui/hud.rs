@@ -15,7 +15,7 @@ use bevy::{
         template::FromTemplate,
         world::Ref,
     },
-    picking::events::{Enter, Leave, Pointer},
+    picking::events::{PointerEnter, PointerLeave},
     prelude::Deref,
     scene::{CommandsSceneExt, Scene, bsn},
     text::{FontSize, Justify, TextColor, TextFont, TextLayout},
@@ -52,7 +52,7 @@ fn health_bar(
     }
 }
 
-fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
+fn add_poison(event: On<Add<Poison>>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
     if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
         if event.entity == **entity {
             Some(color)
@@ -64,7 +64,7 @@ fn add_poison(event: On<Add, Poison>, mut color: Query<(&HealthBar, &mut Backgro
     }
 }
 
-fn remove_poison(event: On<Remove, Poison>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
+fn remove_poison(event: On<Remove<Poison>>, mut color: Query<(&HealthBar, &mut BackgroundColor)>) {
     if let Some(mut color) = color.iter_mut().find_map(|(entity, color)| {
         if event.entity == **entity {
             Some(color)
@@ -118,7 +118,7 @@ fn ability_cooldown<const N: usize>(
 }
 
 fn ability_description_popup(
-    event: On<Pointer<Enter>>,
+    event: On<PointerEnter>,
     boxes: Query<&Children>,
     abilities: Query<&Description>,
     mut descriptions: Query<&mut Node>,
@@ -133,7 +133,7 @@ fn ability_description_popup(
 }
 
 fn ability_description_popup_exit(
-    event: On<Pointer<Leave>>,
+    event: On<PointerLeave>,
     boxes: Query<&Children>,
     abilities: Query<&Description>,
     mut descriptions: Query<&mut Node>,
@@ -167,7 +167,7 @@ fn ability_description<const N: usize>(
 struct HudRoot;
 
 fn spawn(
-    event: On<Add, (Player, Controlled)>,
+    event: On<Add<(Player, Controlled)>>,
     me: Query<(), (With<Health>, With<Mana>, With<Player>, With<Controlled>)>,
     hud: Query<Entity, With<HudRoot>>,
     mut commands: Commands,
@@ -177,7 +177,7 @@ fn spawn(
     }
 }
 
-fn despawn(_: On<Add, Disconnected>, hud: Single<Entity, With<HudRoot>>, mut commands: Commands) {
+fn despawn(_: On<Add<Disconnected>>, hud: Single<Entity, With<HudRoot>>, mut commands: Commands) {
     commands.entity(*hud).despawn();
 }
 
@@ -193,106 +193,97 @@ fn scene(target: Entity) -> impl Scene {
             grid_template_columns: vec![RepeatedGridTrack::percent(1, 100.0)],
         }
         Children [
-            (
-                #Crosshair
+            #Crosshair
+            Node {
+                grid_row: GridPlacement::start(2),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+            }
+            Children [
                 Node {
-                    grid_row: GridPlacement::start(2),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
+                    height: px(10),
+                    width: px(10),
+                }
+                BackgroundColor(Color::BLACK)
+            ]
+            --
+            #HudBottom
+            Node {
+                width: percent(100),
+                display: Display::Grid,
+                grid_row: GridPlacement::start(3),
+                grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
+                margin: UiRect {
+                    left: vw(3),
+                    right: vw(3),
+                    bottom: vh(5),
+                },
+            }
+            Children [
+                #Bars
+                Node {
+                    grid_column: GridPlacement::start(1),
+                    flex_direction: FlexDirection::ColumnReverse,
+                    justify_content: JustifyContent::End,
+                    align_items: AlignItems::Start,
                 }
                 Children [
+                    #HealthBar
                     Node {
-                        height: px(10),
-                        width: px(10),
+                        height: vh(4),
+                        width: percent(100),
+                        border: UiRect::all(px(4)),
                     }
-                    BackgroundColor(Color::BLACK)
+                    BorderColor::all(Color::BLACK)
+                    Children [
+                        Node {
+                            height: percent(100),
+                            width: percent(100),
+                        }
+                        BackgroundColor(HealthBar::RED)
+                        HealthBar(target)
+                        Text
+                    ]
+                    --
+                    #ManaBar
+                    Node {
+                        height: vh(2),
+                        width: percent(80),
+                        border: UiRect::all(px(3)),
+                    }
+                    BorderColor::all(Color::BLACK)
+                    Children [
+                            Node {
+                                height: percent(100),
+                                width: percent(100),
+                            }
+                            BackgroundColor(Color::srgb_u8(0, 0, 255))
+                            ManaBar(target)
+                            Text
+                            TextFont {
+                                font_size: FontSize::Px(15.0),
+                            }
+                    ]
                 ]
-            ),
-            (
-                #HudBottom
+                --
+                #Abilities
                 Node {
-                    width: percent(100),
-                    display: Display::Grid,
-                    grid_row: GridPlacement::start(3),
-                    grid_template_columns: vec![RepeatedGridTrack::fr(3, 1.0)],
-                    margin: UiRect {
-                        left: vw(3),
-                        right: vw(3),
-                        bottom: vh(5),
-                    },
+                    grid_column: GridPlacement::start(2),
+                    justify_content: JustifyContent::Center,
+                    column_gap: px(10),
                 }
                 Children [
-                    (
-                        #Bars
-                        Node {
-                            grid_column: GridPlacement::start(1),
-                            flex_direction: FlexDirection::ColumnReverse,
-                            justify_content: JustifyContent::End,
-                            align_items: AlignItems::Start,
-                        }
-                        Children [
-                            (
-                                #HealthBar
-                                Node {
-                                    height: vh(4),
-                                    width: percent(100),
-                                    border: UiRect::all(px(4)),
-                                }
-                                BorderColor::all(Color::BLACK)
-                                Children [
-                                    (
-                                        Node {
-                                            height: percent(100),
-                                            width: percent(100),
-                                        }
-                                        BackgroundColor(HealthBar::RED)
-                                        HealthBar(target)
-                                        Text
-                                    )
-                                ]
-                            ),
-                            (
-                                #ManaBar
-                                Node {
-                                    height: vh(2),
-                                    width: percent(80),
-                                    border: UiRect::all(px(3)),
-                                }
-                                BorderColor::all(Color::BLACK)
-                                Children [
-                                    (
-                                        Node {
-                                            height: percent(100),
-                                            width: percent(100),
-                                        }
-                                        BackgroundColor(Color::srgb_u8(0, 0, 255))
-                                        ManaBar(target)
-                                        Text
-                                        TextFont {
-                                            font_size: FontSize::Px(15.0),
-                                        }
-                                    )
-                                ]
-                            )
-                        ]
-                    ),
-                    (
-                        #Abilities
-                        Node {
-                            grid_column: GridPlacement::start(2),
-                            justify_content: JustifyContent::Center,
-                            column_gap: px(10),
-                        }
-                        Children [
-                            ability::<1>(target),
-                            ability::<2>(target),
-                            ability::<3>(target),
-                            ability::<4>(target),
-                            ability::<5>(target),
-                        ]
-                    )
+                    @ability::<1>(target)
+                    --
+                    @ability::<2>(target)
+                    --
+                    @ability::<3>(target)
+                    --
+                    @ability::<4>(target)
+                    --
+                    @ability::<5>(target)
                 ]
-            )
+            ]
         ]
     }
 }
@@ -320,40 +311,37 @@ where
             align_items: AlignItems::Center,
         }
         Children [
-            (
-                #Description
-                Node {
-                    padding: UiRect::all(font_size * 0.75),
-                    display: Display::None
-                }
-                BackgroundColor(Color::BLACK)
+            #Description
+            Node {
+                padding: UiRect::all(font_size * 0.75),
+                display: Display::None
+            }
+            BackgroundColor(Color::BLACK)
+            Text
+            TextLayout::justify(Justify::Center)
+            TextFont {
+                font_size,
+            }
+            TextColor(Color::WHITE)
+            DescriptionOf(#Ability)
+            --
+            Node {
+                height: px(100),
+                width: px(100),
+                border: UiRect::all(px(4)),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+            }
+            BackgroundColor(Color::WHITE)
+            BorderColor::all(Color::BLACK)
+            Description(#Description)
+            Children [
+                #Ability
+                Ability::<N>(target)
                 Text
                 TextLayout::justify(Justify::Center)
-                TextFont {
-                    font_size,
-                }
-                TextColor(Color::WHITE)
-                DescriptionOf(#Ability)
-            ),
-            (
-                Node {
-                    height: px(100),
-                    width: px(100),
-                    border: UiRect::all(px(4)),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                }
-                BackgroundColor(Color::WHITE)
-                BorderColor::all(Color::BLACK)
-                Description(#Description)
-                Children [
-                    #Ability
-                    Ability::<N>(target)
-                    Text
-                    TextLayout::justify(Justify::Center)
-                    TextColor(Color::BLACK)
-                ]
-            ),
+                TextColor(Color::BLACK)
+            ]
         ]
     }
 }

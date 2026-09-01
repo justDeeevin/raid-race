@@ -25,7 +25,7 @@ fn on_add<
     T: Component + DerefMut<Target = StackableStatusEffect>,
     Target: Component<Mutability = Mutable> + DerefMut,
 >(
-    event: On<Add, T>,
+    event: On<Add<T>>,
     mut targets: Query<(&T, &mut Target)>,
 ) where
     Target::Target: Sized + From<u8> + AddAssign + SaturatingSub,
@@ -45,7 +45,7 @@ fn on_remove<
     T: Component + DerefMut<Target = StackableStatusEffect>,
     Target: Component<Mutability = Mutable> + DerefMut,
 >(
-    event: On<Remove, T>,
+    event: On<Remove<T>>,
     mut targets: Query<(&T, &mut Target)>,
 ) where
     Target::Target: Sized + From<u8> + AddAssign + SaturatingSub,

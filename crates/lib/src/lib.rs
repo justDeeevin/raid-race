@@ -20,6 +20,7 @@ use input::*;
 use lightyear::{
     avian3d::plugin::LightyearAvianPlugin,
     netcode::Key,
+    prediction::registry::PredictionBuilderExt,
     prelude::{
         input::{InputRegistryExt, bei::InputPlugin},
         *,

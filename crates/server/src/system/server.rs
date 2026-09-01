@@ -8,7 +8,7 @@ use lightyear::{
     connection::{client_of::ClientOf, server::Start},
     netcode::{NetcodeServer, server_plugin::NetcodeConfig},
     prelude::{server::ServerPlugins, *},
-    webtransport::server::WebTransportServerIo,
+    webtransport::endpoint::WebTransportEndpoint,
 };
 use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, TICK_PERIOD, TOTP};
 use std::{
@@ -33,7 +33,7 @@ fn serve(mut commands: Commands, ids: Res<ClientIds>) {
                 IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                 GAME_PORT,
             )),
-            WebTransportServerIo {
+            WebTransportEndpoint {
                 certificate: Identity::new(
                     CertificateChain::single(
                         #[allow(clippy::unwrap_used, reason = "shouldn't fail")]
@@ -90,12 +90,12 @@ async fn id_server(ids: Arc<RwLock<HashSet<u64>>>) {
     }
 }
 
-fn start_join(event: On<Add, LinkOf>, mut commands: Commands) {
+fn start_join(event: On<Add<LinkOf>>, mut commands: Commands) {
     commands.entity(event.entity).insert(ReplicationSender);
 }
 
 fn join(
-    event: On<Add, Connected>,
+    event: On<Add<Connected>>,
     id: Query<&RemoteId, With<ClientOf>>,
     client_ids: Res<ClientIds>,
     mut ids: ResMut<Ids>,
@@ -114,7 +114,7 @@ fn join(
     }
 }
 
-fn leave(event: On<Add, Disconnected>, id: Query<&RemoteId, With<ClientOf>>, ids: Res<ClientIds>) {
+fn leave(event: On<Add<Disconnected>>, id: Query<&RemoteId, With<ClientOf>>, ids: Res<ClientIds>) {
     if let Ok(RemoteId(PeerId::Netcode(id))) = id.get(event.entity) {
         ids.write_blocking().remove(id);
     };

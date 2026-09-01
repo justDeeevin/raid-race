@@ -1,15 +1,12 @@
-use avian3d::{
-    math::{Scalar, Vector},
-    prelude::*,
-};
+use avian3d::{math::RVector, prelude::*};
 use bevy::prelude::*;
 
 pub fn shoot(
     space: SpatialQuery,
     source: Entity,
-    origin: Vector,
+    origin: RVector,
     direction: Dir3,
-    distance: Scalar,
+    distance: f32,
 ) -> Option<Entity> {
     let filter = SpatialQueryFilter::from_excluded_entities([source]);
 

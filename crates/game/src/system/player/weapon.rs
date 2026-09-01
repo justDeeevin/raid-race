@@ -8,7 +8,7 @@ use raid_race_lib::{
 };
 
 fn load_weapon_assets(
-    event: On<Add, (Weapon, HeldWeapon)>,
+    event: On<Add<(Weapon, HeldWeapon)>>,
     weapons: Query<&Weapon>,
     held_weapons: Query<&HeldWeapon>,
     mut commands: Commands,

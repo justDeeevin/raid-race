@@ -15,7 +15,8 @@ use bevy_console::{
 use lightyear::prelude::{
     Controlled, MessageReceiver,
     input::bei::{
-        Action, ActionOf, Binding, Bindings, Cardinal, ContextActivity, InputAction, bindings,
+        Action, ActionOf, Binding, Bindings, ContextActivity, InputAction,
+        preset::cardinal::wasd_keys,
     },
 };
 use raid_race_lib::{
@@ -67,66 +68,66 @@ fn whoami(
 
 // TODO: configurable
 trait Binds: InputAction {
-    fn bindings() -> impl Bundle;
+    fn bindings() -> impl Scene;
 }
 
 impl Binds for Walk {
-    fn bindings() -> impl Bundle {
-        Bindings::spawn(Cardinal::wasd_keys())
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [{wasd_keys()}]}
     }
 }
 
 impl Binds for Jump {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Space]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Space)]}
     }
 }
 
 impl Binds for Look {
-    fn bindings() -> impl Bundle {
-        bindings![Binding::mouse_motion()]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding::mouse_motion()]}
     }
 }
 
 impl Binds for Ability<1> {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Digit1]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Digit1)]}
     }
 }
 
 impl Binds for Ability<2> {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Digit2]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Digit2)]}
     }
 }
 
 impl Binds for Ability<3> {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Digit3]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Digit3)]}
     }
 }
 
 impl Binds for Ability<4> {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Digit4]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Digit4)]}
     }
 }
 
 impl Binds for Ability<5> {
-    fn bindings() -> impl Bundle {
-        bindings![KeyCode::Digit5]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(KeyCode::Digit5)]}
     }
 }
 
 impl Binds for Attack {
-    fn bindings() -> impl Bundle {
-        bindings![MouseButton::Left]
+    fn bindings() -> impl Scene {
+        bsn! {Bindings [Binding(MouseButton::Left)]}
     }
 }
 
 /// Adds bindings to an action entity when it spawns.
 fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
-    event: On<Insert, (Action<A>, ActionOf<Context>)>,
+    event: On<Insert<(Action<A>, ActionOf<Context>)>>,
     actions: Query<&ActionOf<Context>, (With<Action<A>>, Without<Bindings>)>,
     controlled: Query<(), (With<Owner>, With<Controlled>)>,
     mut commands: Commands,
@@ -134,7 +135,7 @@ fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     if let Ok(action_of) = actions.get(event.entity)
         && controlled.get(**action_of).is_ok()
     {
-        commands.entity(event.entity).insert(A::bindings());
+        commands.entity(event.entity).apply_scene(A::bindings());
     }
 }
 
@@ -151,7 +152,7 @@ macro_rules! add_bindings_on_owner_spawn {
         use ::bevy::ecs::{self, system::{self, Query}, query::{self, With}};
 
         |
-            event: ecs::observer::On<ecs::lifecycle::Add, ($owner, Controlled, $(Actions<$context>),*)>,
+            event: ecs::observer::On<ecs::lifecycle::Add<($owner, Controlled, $(Actions<$context>),*)>>,
             $($owners: Query<&Actions<$context>, (With<$owner>, With<Controlled>)>,
                 $($actions: Query<(), (With<bei::Action<$action>>, query::Without<bei::Bindings>)>),*
             ),*,
@@ -160,7 +161,7 @@ macro_rules! add_bindings_on_owner_spawn {
             if let Ok(actions) = $owners.get(event.entity)  {
                 for action in actions {$(
                     if $actions.get(action).is_ok() {
-                        commands.entity(action).insert(<$action as $crate::system::player::Binds>::bindings());
+                        commands.entity(action).apply_scene(<$action as $crate::system::player::Binds>::bindings());
                         continue;
                     }
                 )*}
@@ -170,38 +171,38 @@ macro_rules! add_bindings_on_owner_spawn {
 }
 
 fn spawn(
-    event: On<Add, Player>,
+    event: On<Add<Player>>,
     controlled: Query<(), With<Controlled>>,
     mut commands: Commands,
     camera: Query<Entity, With<AimCamera>>,
 ) {
-    const NOSE_LENGTH: f32 = PLAYER_RADIUS as f32 * 1.5;
+    const NOSE_LENGTH: f32 = PLAYER_RADIUS * 1.5;
 
-    commands
-        .entity(event.entity)
-        .apply_scene(bsn! {
-            #Player
-            Mesh3d(asset_value(Capsule3d::new(
-                PLAYER_RADIUS as f32,
-                PLAYER_CAPSULE_LENGTH as f32,
-            )))
-            MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
-            ContextActivity::<Player>::INACTIVE
-            Children [
-                Mesh3d(asset_value(Cuboid::new(0.1, 0.1, NOSE_LENGTH)))
-                MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
-                Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH as f32 / 2.0, -NOSE_LENGTH)
-            ]
-        })
-        .insert(physics_components());
+    let mut cmds = commands.entity(event.entity);
+
+    cmds.apply_scene(bsn! {
+        #Player
+        Mesh3d(asset_value(Capsule3d::new(
+            PLAYER_RADIUS,
+            PLAYER_CAPSULE_LENGTH,
+        )))
+        MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb_u8(124, 144, 255)))
+        ContextActivity::<Player>::INACTIVE
+        Children [
+            Mesh3d(asset_value(Cuboid::new(0.1, 0.1, NOSE_LENGTH)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+            Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH / 2.0, -NOSE_LENGTH)
+        ]
+    });
 
     if controlled.get(event.entity).is_ok() {
+        cmds.insert(physics_components());
         // TODO: this should just be a resource
         commands
             .entity(camera.single().expect("multiple aim cameras"))
             .insert((
                 OrbitCamera(event.entity),
-                SpatialListener::new(-PLAYER_RADIUS as f32),
+                SpatialListener::new(-PLAYER_RADIUS),
             ));
     }
 }

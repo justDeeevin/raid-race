@@ -14,7 +14,7 @@ use crate::{
     scene::Dummy,
 };
 use avian3d::{
-    math::{Quaternion, Scalar, Vector},
+    math::{RVector, Real},
     prelude::*,
 };
 use bevy::prelude::*;
@@ -27,38 +27,37 @@ use bevy_enhanced_input::{
 };
 use either::Either;
 
-pub const PLAYER_HEIGHT: Scalar = 2.0;
+pub const PLAYER_HEIGHT: f32 = 2.0;
 // -- DON'T CHANGE --
-pub const PLAYER_CAPSULE_LENGTH: Scalar = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
+pub const PLAYER_CAPSULE_LENGTH: f32 = PLAYER_HEIGHT - (PLAYER_RADIUS * 2.0);
 // ------------------
-pub const PLAYER_RADIUS: Scalar = PLAYER_HEIGHT / 8.0;
+pub const PLAYER_RADIUS: f32 = PLAYER_HEIGHT / 8.0;
 
 fn walk(
     event: On<Fire<Walk>>,
-    mut params: Query<(&ComputedMass, &Transform, &Agility, Forces)>,
+    mut params: Query<(&ComputedMass, &Rotation, &Agility, Forces)>,
     time: Res<Time>,
 ) {
-    const MAX_SPEED: Scalar = 5.0;
-    const MAX_ACCELERATION: Scalar = 40.0;
+    const MAX_SPEED: f32 = 5.0;
+    const MAX_ACCELERATION: f32 = 40.0;
 
-    let Ok((mass, transform, agility, mut forces)) = params.get_mut(event.context) else {
+    let Ok((mass, rotation, agility, mut forces)) = params.get_mut(event.context) else {
         return;
     };
     let Ok(move_dir) =
-        Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| transform.rotation * d)
+        Dir3::new(Vec3::new(event.value.x, 0.0, -event.value.y)).map(|d| rotation * d)
     else {
         return;
     };
 
-    let delta_t = time.delta_secs_f64();
+    let delta_t = time.delta_secs();
     let max_delta_v = MAX_ACCELERATION * delta_t;
 
     let velocity = {
         let t = forces.linear_velocity();
-        Vector::new(t.x, 0.0, t.z)
+        Vec3::new(t.x, 0.0, t.z)
     };
-    let target_velocity =
-        move_dir.as_dvec3() * (MAX_SPEED + (Agility::SCALER * **agility as Scalar)).max(0.0);
+    let target_velocity = move_dir * (MAX_SPEED + (Agility::SCALER * **agility as f32)).max(0.0);
     let new_velocity = velocity.move_towards(target_velocity, max_delta_v);
 
     let required_acceleration = (new_velocity - velocity) / delta_t;
@@ -67,7 +66,7 @@ fn walk(
 }
 
 fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity, With<Grounded>>) {
-    const JUMP_SPEED: Scalar = 3.0;
+    const JUMP_SPEED: f32 = 3.0;
 
     if let Ok(mut velocity) = velocity.get_mut(event.context) {
         velocity.y = JUMP_SPEED
@@ -75,9 +74,9 @@ fn jump(event: On<Start<Jump>>, mut velocity: Query<&mut LinearVelocity, With<Gr
 }
 
 fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
-    const YAW_SENS: Scalar = 0.003;
-    const PITCH_SENS: Scalar = YAW_SENS;
-    const MAX_PITCH: Scalar = std::f64::consts::FRAC_PI_2;
+    const YAW_SENS: f32 = 0.003;
+    const PITCH_SENS: f32 = YAW_SENS;
+    const MAX_PITCH: f32 = std::f32::consts::FRAC_PI_2;
 
     let delta = -event.value;
 
@@ -85,15 +84,10 @@ fn look(event: On<Fire<Look>>, mut params: Query<(&mut Pitch, &mut Rotation)>) {
         return;
     };
 
-    **pitch = (**pitch + (delta.y as Scalar * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
+    **pitch = (**pitch + (delta.y * PITCH_SENS)).clamp(-MAX_PITCH, MAX_PITCH);
 
     let (yaw, pitch, roll) = rotation.to_euler(EulerRot::YXZ);
-    **rotation = Quaternion::from_euler(
-        EulerRot::YXZ,
-        yaw + (delta.x as Scalar * YAW_SENS),
-        pitch,
-        roll,
-    );
+    **rotation = Quat::from_euler(EulerRot::YXZ, yaw + (delta.x * YAW_SENS), pitch, roll);
 }
 
 pub fn camera_transform(target: (&Position, &Rotation, &Pitch)) -> Transform {
@@ -105,8 +99,8 @@ pub fn camera_transform(target: (&Position, &Rotation, &Pitch)) -> Transform {
 
     out.rotation = Quat::from_euler(
         EulerRot::YXZ,
-        rotation.to_euler(EulerRot::YXZ).0 as f32,
-        **pitch as f32,
+        rotation.to_euler(EulerRot::YXZ).0,
+        **pitch,
         out.rotation.to_euler(EulerRot::YXZ).2,
     );
     out.translation =
@@ -120,14 +114,14 @@ fn grounded(
     grounded: Query<(), With<Grounded>>,
     mut commands: Commands,
 ) {
-    const MIN_ANGLE: Scalar = 30_f64.to_radians();
-    const MAX_DISTANCE: Scalar = 0.1;
+    const MIN_ANGLE: f32 = 30_f32.to_radians();
+    const MAX_DISTANCE: f32 = 0.1;
 
     let sin = MIN_ANGLE.sin();
 
     for (player, hits) in casts {
         if hits.iter().any(|hit| {
-            hit.normal.dot(Vector::Y) >= hit.normal.length() * sin && hit.distance <= MAX_DISTANCE
+            hit.normal.dot(Vec3::Y) >= hit.normal.length() * sin && hit.distance <= MAX_DISTANCE
         }) {
             if grounded.get(player).is_err() {
                 commands.entity(player).insert(Grounded);
@@ -278,6 +272,9 @@ pub fn physics_components() -> impl Bundle {
         RigidBody::Dynamic,
         Collider::capsule(PLAYER_RADIUS, PLAYER_CAPSULE_LENGTH),
         LockedAxes::ROTATION_LOCKED,
-        RayCaster::new(Vector::new(0.0, -PLAYER_HEIGHT / 2.0, 0.0), Dir3::NEG_Y),
+        RayCaster::new(
+            RVector::new(0.0, -PLAYER_HEIGHT as Real / 2.0, 0.0),
+            Dir3::NEG_Y,
+        ),
     )
 }

@@ -1,11 +1,9 @@
 pub mod player;
 pub mod status;
 
-use std::ops::AddAssign;
-
-use avian3d::math::Scalar;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::ops::AddAssign;
 
 #[derive(Component, Serialize, Deserialize, Deref, Clone, Copy)]
 #[component(immutable)]
@@ -73,7 +71,7 @@ pub struct Dps(pub u16);
 pub struct Agility(pub i16);
 
 impl Agility {
-    pub const SCALER: Scalar = 0.1;
+    pub const SCALER: f32 = 0.1;
 }
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]

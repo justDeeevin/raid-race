@@ -30,6 +30,7 @@ bevy_winit = { version = "0.19", features = ["custom_cursor", "serialize", "wayl
 bytes = { version = "1", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 clap_builder = { version = "4", default-features = false, features = ["color", "help", "std", "suggestions", "usage"] }
+digest = { version = "0.11", features = ["alloc", "mac", "oid"] }
 either = { version = "1", features = ["serde", "use_std"] }
 foldhash = { version = "0.2", default-features = false, features = ["std"] }
 form_urlencoded = { version = "1" }
@@ -37,19 +38,19 @@ futures-channel = { version = "0.3", features = ["sink"] }
 getrandom-6f8ce4dd05d13bba = { package = "getrandom", version = "0.2", default-features = false, features = ["std"] }
 hashbrown = { version = "0.17", default-features = false, features = ["default-hasher", "raw-entry"] }
 indexmap = { version = "2", features = ["serde"] }
-lightyear = { version = "0.29", default-features = false, features = ["avian3d", "client", "input_bei", "interpolation", "netcode", "prediction", "replication", "server", "webtransport", "webtransport_self_signed"] }
-lightyear_connection = { version = "0.29", default-features = false, features = ["client", "server"] }
-lightyear_frame_interpolation = { version = "0.29", default-features = false, features = ["std"] }
-lightyear_inputs = { version = "0.29", default-features = false, features = ["client", "interpolation", "prediction", "server", "std"] }
-lightyear_inputs_bei = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
-lightyear_interpolation = { version = "0.29", default-features = false, features = ["std"] }
-lightyear_messages = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
-lightyear_netcode = { version = "0.29" }
-lightyear_prediction = { version = "0.29", default-features = false, features = ["server", "std"] }
-lightyear_replication = { version = "0.29", default-features = false, features = ["avian3d", "client", "interpolation", "prediction", "server", "std"] }
-lightyear_sync = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
-lightyear_transport = { version = "0.29", default-features = false, features = ["client", "server", "std"] }
-lightyear_webtransport = { version = "0.29", default-features = false, features = ["client", "self-signed", "server"] }
+lightyear = { version = "0.30", default-features = false, features = ["avian3d", "client", "input_bei", "interpolation", "netcode", "prediction", "replication", "server", "webtransport", "webtransport_self_signed"] }
+lightyear_connection = { version = "0.30", default-features = false, features = ["client", "server"] }
+lightyear_frame_interpolation = { version = "0.30", default-features = false, features = ["std"] }
+lightyear_inputs = { version = "0.30", default-features = false, features = ["client", "interpolation", "prediction", "server", "std"] }
+lightyear_inputs_bei = { version = "0.30", default-features = false, features = ["client", "server", "std"] }
+lightyear_interpolation = { version = "0.30", default-features = false, features = ["std"] }
+lightyear_messages = { version = "0.30", default-features = false, features = ["client", "replicon", "server", "std"] }
+lightyear_netcode = { version = "0.30" }
+lightyear_prediction = { version = "0.30", default-features = false, features = ["server", "std"] }
+lightyear_replication = { version = "0.30", default-features = false, features = ["avian3d", "client", "interpolation", "prediction", "server", "std"] }
+lightyear_sync = { version = "0.30", default-features = false, features = ["client", "server", "std"] }
+lightyear_transport = { version = "0.30", default-features = false, features = ["client", "server", "std"] }
+lightyear_webtransport = { version = "0.30", default-features = false, features = ["client", "self-signed", "server"] }
 linebender_resource_handle = { version = "0.1", default-features = false, features = ["std"] }
 log = { version = "0.4", default-features = false, features = ["kv_unstable", "std"] }
 nom = { version = "7" }
@@ -58,10 +59,10 @@ rand_core = { version = "0.6", default-features = false, features = ["std"] }
 read-fonts = { version = "0.41", default-features = false, features = ["experimental_font_api", "std"] }
 rodio = { version = "0.22", default-features = false, features = ["lewton", "mp3", "playback", "tracing"] }
 serde_core = { version = "1", features = ["alloc", "rc"] }
+sha2 = { version = "0.11" }
 skrifa = { version = "0.44", default-features = false, features = ["autohint_shaping", "std"] }
 standback = { version = "0.2", default-features = false, features = ["std"] }
 tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
-typenum = { version = "1", default-features = false, features = ["const-generics"] }
 url = { version = "2", features = ["serde"] }
 zeroize = { version = "1" }
 

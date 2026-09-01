@@ -2,7 +2,7 @@ use crate::Ids;
 use avian3d::physics_transform::Position;
 use bevy::prelude::*;
 use lightyear::prelude::{
-    input::bei::{Action, actions},
+    input::bei::{Action, Actions},
     *,
 };
 use raid_race_lib::{
@@ -29,7 +29,7 @@ pub struct Player {
     cdr: u16,
     #[builder(default)]
     luck: u8,
-    #[builder(default=Position::from_xyz(0.0, PLAYER_HEIGHT / 2.0, 0.0))]
+    #[builder(default=Position::from_xyz(0.0, PLAYER_HEIGHT as f64 / 2.0, 0.0))]
     init_pos: Position,
 }
 
@@ -41,6 +41,10 @@ pub fn player(
     Player::builder().health(health).mana(mana).dps(dps)
 }
 
+fn client_replicate(id: PeerId) -> Replicate {
+    Replicate::to_clients(NetworkTarget::Single(id))
+}
+
 impl Player {
     pub fn spawn<'a>(
         &self,
@@ -49,12 +53,10 @@ impl Player {
         ids: &mut Ids,
         owner: Entity,
     ) -> EntityCommands<'a> {
-        let client_replicate = Replicate::to_clients(NetworkTarget::Single(id));
-
         let mut attack = Timer::from_seconds(1.0, TimerMode::Once);
         attack.finish();
 
-        commands.spawn((
+        let mut out = commands.spawn((
             (
                 PlayerComponent(id),
                 ids.get(),
@@ -66,17 +68,6 @@ impl Player {
                 Cdr(self.cdr),
                 Luck(self.luck),
                 Pitch(0.0),
-                actions!(PlayerComponent[
-                    (Action::<Walk>::default(), client_replicate.clone()),
-                    (Action::<Look>::default(), client_replicate.clone()),
-                    (Action::<Jump>::default(), client_replicate.clone()),
-                    (Action::<Ability<1>>::default(), client_replicate.clone()),
-                    (Action::<Ability<2>>::default(), client_replicate.clone()),
-                    (Action::<Ability<3>>::default(), client_replicate.clone()),
-                    (Action::<Ability<4>>::default(), client_replicate.clone()),
-                    (Action::<Ability<5>>::default(), client_replicate.clone()),
-                    (Action::<Attack>::default(), client_replicate.clone()),
-                ]),
                 AttackCooldown(attack),
             ),
             physics_components(),
@@ -88,6 +79,39 @@ impl Player {
             Replicate::to_clients(NetworkTarget::All),
             PredictionTarget::to_clients(NetworkTarget::Single(id)),
             InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(id)),
-        ))
+        ));
+
+        out.apply_scene(bsn! {
+            Actions<PlayerComponent> [
+                Action::<Walk>
+                client_replicate(id)
+                --
+                Action::<Look>
+                client_replicate(id)
+                --
+                Action::<Jump>
+                client_replicate(id)
+                --
+                Action::<Ability<1>>
+                client_replicate(id)
+                --
+                Action::<Ability<2>>
+                client_replicate(id)
+                --
+                Action::<Ability<3>>
+                client_replicate(id)
+                --
+                Action::<Ability<4>>
+                client_replicate(id)
+                --
+                Action::<Ability<5>>
+                client_replicate(id)
+                --
+                Action::<Attack>
+                client_replicate(id)
+            ]
+        });
+
+        out
     }
 }

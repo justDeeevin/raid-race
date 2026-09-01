@@ -8,7 +8,7 @@ use crate::{
     event::{Attacked, Hit},
     system::player::camera_transform,
 };
-use avian3d::{math::Scalar, prelude::*};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub fn attack(
@@ -17,7 +17,7 @@ pub fn attack(
     players: Query<(&HeldWeapon, &Position, &Rotation, &Pitch)>,
     mut commands: Commands,
 ) {
-    const MAX_DISTANCE: Scalar = 200.0;
+    const MAX_DISTANCE: f32 = 200.0;
 
     let Ok((HeldWeapon(weapon), position, rotation, pitch)) = players.get(**event) else {
         return;
@@ -32,7 +32,7 @@ pub fn attack(
         false,
         &filter,
     ) && let Ok(dir) = Dir3::new(
-        (camera.translation + (camera.forward() * camera_hit.distance as f32)) - position.as_vec3(),
+        (camera.translation + (camera.forward() * camera_hit.distance)) - position.as_vec3(),
     ) && let Some(target) = match weapon {
         Weapon::PlaceholderGun => {
             placeholder_gun::shoot(space, **event, **position, dir, camera_hit.distance)

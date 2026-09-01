@@ -179,7 +179,7 @@ fn slot(
     event: On<SlotCommand>,
     mut warriors: Query<(&Id, Entity, &mut Character)>,
     mut tx: ServerMultiMessageSender,
-    server: Single<&Server>,
+    server: Single<&Endpoint>,
 ) {
     let Some((entity, mut character)) = warriors.iter_mut().find_map(|(id, entity, character)| {
         if **id == event.target {
