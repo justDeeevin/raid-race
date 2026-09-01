@@ -10,7 +10,7 @@ fn main() {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: None,
                 exit_condition: ExitCondition::DontExit,
-                ..Default::default()
+                ..default()
             }),
             server::plugin,
             console::plugin,

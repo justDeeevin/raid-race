@@ -14,7 +14,7 @@ fn blockout_material() -> impl Scene {
         MeshMaterial3d::<ExtendedMaterial<StandardMaterial, BlockoutMaterialExt>>(
             asset_value(ExtendedMaterial {
                 base: StandardMaterial::from_color(Color::WHITE),
-                extension: BlockoutMaterialExt::default(),
+                extension: default(),
             }
         ))
     }

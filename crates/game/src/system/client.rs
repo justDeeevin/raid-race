@@ -10,7 +10,7 @@ use bevy_console::{
 use futures::TryFutureExt;
 use http_types::Request;
 use lightyear::{
-    netcode::{ConnectToken, NetcodeClient, client_plugin::NetcodeConfig},
+    netcode::{ConnectToken, NetcodeClient},
     prelude::{client::ClientPlugins, *},
     webtransport::client::WebTransportClientIo,
 };
@@ -121,9 +121,9 @@ fn wait_for_token(
 
         #[allow(clippy::unwrap_used, reason = "should never fail")]
         {
-            commands.entity(entity).insert(
-                NetcodeClient::new(Authentication::Token(token), NetcodeConfig::default()).unwrap(),
-            );
+            commands
+                .entity(entity)
+                .insert(NetcodeClient::new(Authentication::Token(token), default()).unwrap());
         }
 
         commands.trigger(Connect { entity });
