@@ -3,7 +3,7 @@ pub mod weapon;
 
 use crate::{
     component::alive::{
-        Agility, Defense, Dps, Health,
+        Agility, Defense, Dps, Health, Mana,
         player::{
             AttackCooldown, Grounded, Pitch, Player,
             character::{Character, Cooldowns},
@@ -201,28 +201,29 @@ fn attack_cooldown(attack_timer: Query<&mut AttackCooldown>, time: Res<Time>) {
 
 fn ability<const N: usize>(
     event: On<Start<Ability<N>>>,
-    mut characters: Query<(&Character, &mut Cooldowns)>,
+    mut characters: Query<(&Character, &mut Cooldowns, &mut Mana)>,
     mut commands: Commands,
 ) where
     Ability<N>: InputAction,
 {
-    if let Ok((character, mut cooldowns)) = characters.get_mut(event.context) {
-        match cooldowns.get_mut(N - 1) {
+    if let Ok((character, mut cooldowns, mut mana)) = characters.get_mut(event.context) {
+        let cast = match cooldowns.get_mut(N - 1) {
             Some(Either::Left(timer)) if timer.is_finished() => {
                 timer.reset();
-                character
-                    .data
-                    .ability(N)
-                    .trigger(event.context, &mut commands);
+                true
             }
             Some(Either::Right(ready)) if *ready => {
                 *ready = false;
-                character
-                    .data
-                    .ability(N)
-                    .trigger(event.context, &mut commands);
+                true
             }
-            Some(_) | None => {}
+            Some(_) | None => false,
+        };
+        if cast {
+            character
+                .data
+                .ability(N)
+                .trigger(event.context, &mut commands);
+            *mana -= character.data.ability(N).cost();
         }
     }
 }

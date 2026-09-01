@@ -50,6 +50,12 @@ impl AddAssign<u16> for Mana {
     }
 }
 
+impl std::ops::SubAssign<u16> for Mana {
+    fn sub_assign(&mut self, rhs: u16) {
+        self.current = self.cap.min(self.current - rhs);
+    }
+}
+
 impl Mana {
     pub fn new(cap: u16) -> Self {
         Self(Meter::new(cap))

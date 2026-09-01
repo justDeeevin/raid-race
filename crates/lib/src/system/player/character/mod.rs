@@ -10,6 +10,7 @@ macro_rules! abilities {
     ($($ability:ident {
         cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block,
         description: $description:literal $(,
+        cost: $cost:literal)? $(,
         name: $name:literal)? $(,
         cooldown: $cooldown:expr)? $(,
         ready$ready:vis)? $(,)?
@@ -68,6 +69,15 @@ macro_rules! abilities {
             fn description(&self) -> String {
                 match self {$(
                     Self::$ability => $description.into()
+                ),*}
+            }
+
+            fn cost(&self) -> u16 {
+                match self {$(
+                    Self::$ability => {
+                        0 $(;
+                        $cost)?
+                    }
                 ),*}
             }
         }

@@ -83,4 +83,5 @@ pub trait AbilityId: std::fmt::Display {
     fn trigger(&self, entity: Entity, commands: &mut Commands);
     fn cooldown(&self) -> Either<Timer, bool>;
     fn description(&self) -> String;
+    fn cost(&self) -> u16;
 }
