@@ -28,9 +28,10 @@ impl Health {
         Self(Meter::new(cap))
     }
 
-    pub fn damage(&mut self, damage: u16, defense: i16) {
+    pub fn damage(&mut self, damage: u16, defense: Option<i16>) {
         self.current = self.current.saturating_sub(
-            (damage as f32 * (1.0 - (Defense::DELTA * defense as f32)).max(0.0)) as u16,
+            (damage as f32 * (1.0 - (Defense::DELTA * defense.unwrap_or_default() as f32)).max(0.0))
+                as u16,
         );
     }
 }
@@ -97,7 +98,7 @@ impl Cdr {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
+#[derive(Component, Serialize, Deserialize, Deref, DerefMut, Clone, Copy)]
 pub struct Defense(pub i16);
 
 impl Defense {

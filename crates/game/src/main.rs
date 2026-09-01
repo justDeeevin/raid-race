@@ -31,7 +31,7 @@ fn main() {
             client::plugin,
             player::plugin,
             ui::hud::plugin,
-            inspector,
+            // inspector,
             // avian3d::debug_render::PhysicsDebugPlugin,
         ))
         .add_systems(Startup, |mut commands: Commands| {

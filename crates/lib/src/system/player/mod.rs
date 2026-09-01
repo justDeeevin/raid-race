@@ -179,14 +179,14 @@ fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>, no_cd: Re
 fn hit(
     event: On<Hit>,
     damage: Query<(&Dps, &AttackCooldown)>,
-    mut health: Query<(&mut Health, &Defense)>,
+    mut health: Query<(&mut Health, Option<&Defense>)>,
 ) {
     if let Ok((Dps(damage), AttackCooldown(timer))) = damage.get(event.source)
         && let Ok((mut health, defense)) = health.get_mut(event.target)
     {
         health.damage(
             (*damage as f32 * timer.duration().as_secs_f32()) as u16,
-            **defense,
+            defense.copied().as_deref().copied(),
         );
     }
 }

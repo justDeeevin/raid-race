@@ -109,7 +109,7 @@ abilities! {
             event,
             space| SpatialQuery,
             params| Query<(&Position, &Rotation)>,
-            mut targets| Query<(&mut Health, &Defense), With<Agility>>,
+            mut targets| Query<(&mut Health, Option<&Defense>, Option<&Agility>)>,
             mut commands| Commands
         ) {
             #[allow(clippy::unwrap_used, reason = "const")]
@@ -127,12 +127,14 @@ abilities! {
                         -PLAYER_RADIUS - (HITBOX_DIMENSIONS.z / 2.0),
                     )),
                     **rotation,
-                    &default(),
+                    &SpatialQueryFilter::from_excluded_entities([**event]),
                 ) {
-                    if let Ok((mut health, defense)) = targets.get_mut(hit) {
-                        commands.entity(hit)
-                            .insert(AgilityDown(StackableStatusEffect::new(AGILITY_DOWN_STACKS, DEBUFF_DURATION)));
-                        health.damage(DAMAGE, **defense);
+                    if let Ok((mut health, defense, agility)) = targets.get_mut(hit) {
+                        if agility.is_some() {
+                            commands.entity(hit)
+                                .insert(AgilityDown(StackableStatusEffect::new(AGILITY_DOWN_STACKS, DEBUFF_DURATION)));
+                        }
+                        health.damage(DAMAGE, defense.copied().as_deref().copied());
                     }
                 }
             }
@@ -214,7 +216,7 @@ abilities! {
                     &collider,
                     **position + (**rotation * Vector::new(0.0, -HEIGHT / 2.0, -PLAYER_RADIUS)),
                     **rotation,
-                    &Default::default()
+                    &SpatialQueryFilter::from_excluded_entities([**event]),
                 ) {
                     if let Ok(defense) = targets.get(hit)
                     {
@@ -231,12 +233,33 @@ abilities! {
         description: "Temporarily decrease the defense of enemies in a cone in front of you.",
         cooldown: Duration::from_secs(10),
     },
+    Slash {
+        cast: (event, sources| Query<(&Position, &Rotation)>, mut targets| Query<(&mut Health, Option<&Defense>)>, space| SpatialQuery) {
+            const DAMAGE: u16 = 6;
+            const HITBOX_DIMENSIONS: Vector = Vector::new(0.1, 1.0, 1.0);
+
+            if let Ok((position, rotation)) = sources.get(**event) {
+                for hit in space.shape_intersections(
+                    &Collider::cuboid(HITBOX_DIMENSIONS.x, HITBOX_DIMENSIONS.y, HITBOX_DIMENSIONS.z),
+                    **position + (**rotation * Vector::NEG_Z * ((HITBOX_DIMENSIONS.z / 2.0) + PLAYER_RADIUS)),
+                    **rotation,
+                    &SpatialQueryFilter::from_excluded_entities([**event]),
+                ) {
+                    if let Ok((mut health, defense)) = targets.get_mut(hit) {
+                        health.damage(DAMAGE, defense.copied().as_deref().copied());
+                    }
+                }
+            }
+        },
+        description: "Damaging upward slash.",
+        cooldown: Duration::from_secs(10),
+    },
 }
 
 fn strike_bonus(
     event: On<Hit>,
     mut characters: Query<(&mut Character, &Dps)>,
-    mut targets: Query<(&mut Health, &Defense)>,
+    mut targets: Query<(&mut Health, Option<&Defense>)>,
     mut commands: Commands,
 ) {
     if let Ok((mut character, Dps(dps))) = characters.get_mut(event.source)
@@ -251,7 +274,7 @@ fn strike_bonus(
         if *strike || *combo > 0 {
             health.damage(
                 (*dps as f32 * (*strike_bonus_percent as f32 / 100.0)) as u16,
-                **defense,
+                defense.copied().as_deref().copied(),
             );
         }
 
@@ -285,7 +308,7 @@ fn combo_window(warriors: Query<(&mut Character, &mut Cooldowns)>, time: Res<Tim
 
 fn spin(
     characters: Query<(Entity, &mut Character, &Position, &Dps)>,
-    mut healths: Query<(&mut Health, &Defense)>,
+    mut healths: Query<(&mut Health, Option<&Defense>)>,
     space: SpatialQuery,
     time: Res<Time>,
 ) {
@@ -314,7 +337,7 @@ fn spin(
                 if let Ok((mut health, defense)) = healths.get_mut(hit) {
                     health.damage(
                         (**dps as f32 * timer.duration().as_secs_f32() * DAMAGE_MULTIPLIER) as u16,
-                        **defense,
+                        defense.copied().as_deref().copied(),
                     );
                 }
             }
