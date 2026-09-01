@@ -9,7 +9,7 @@ use bevy_blockout::BlockoutMaterialExt;
 #[derive(Component, FromTemplate)]
 pub struct Dummy;
 
-fn block_material() -> impl Scene {
+fn blockout_material() -> impl Scene {
     bsn! {
         MeshMaterial3d::<ExtendedMaterial<StandardMaterial, BlockoutMaterialExt>>(
             asset_value(ExtendedMaterial {
@@ -27,7 +27,7 @@ pub fn test() -> impl SceneList {
             template_value(RigidBody::Static)
             Collider::cuboid(100.0, 1.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 1.0, 100.0)))
-            block_material()
+            blockout_material()
             Friction::new(3.0)
         ),
         (
@@ -36,7 +36,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(0.0, 0.5, -50.0)
             Collider::cuboid(100.0, 4.0, 1.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
-            block_material()
+            blockout_material()
         ),
         (
             #RightWall
@@ -44,7 +44,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(50.0, 0.5, 0.0)
             Collider::cuboid(1.0, 4.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
-            block_material()
+            blockout_material()
         ),
         (
             #BackWall
@@ -52,7 +52,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(0.0, 0.5, 50.0)
             Collider::cuboid(100.0, 4.0, 1.0)
             Mesh3d(asset_value(Cuboid::new(100.0, 4.0, 1.0)))
-            block_material()
+            blockout_material()
         ),
         (
             #LeftWall
@@ -60,7 +60,7 @@ pub fn test() -> impl SceneList {
             Position::from_xyz(-50.0, 0.5, 0.0)
             Collider::cuboid(1.0, 4.0, 100.0)
             Mesh3d(asset_value(Cuboid::new(1.0, 4.0, 100.0)))
-            block_material()
+            blockout_material()
         ),
         (
             PointLight {

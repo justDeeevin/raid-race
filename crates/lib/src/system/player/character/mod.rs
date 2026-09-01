@@ -1,14 +1,27 @@
+/// Abilities for a character.
+///
+/// Generates:
+/// - `enum AbilityId`
+/// - [`impl crate::component::alive::player::character::AbilityId for AbilityId`](crate::component::alive::player::character::AbilityId)
+/// - Ability structs for [`Cast`](crate::event::Cast) event
+/// - `add_ability_systems` function
+// TODO: stat boxes
 macro_rules! abilities {
     ($($ability:ident {
-        cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block $(,
+        cast: ($event:ident, $($param:pat_param| $type:ty),* $(,)?) $body:block,
+        description: $description:literal $(,
         name: $name:literal)? $(,
         cooldown: $cooldown:expr)? $(,
-        ready: $ready:expr)? $(,)?
+        ready$ready:vis)? $(,)?
     }),* $(,)?) => {
         #[derive(::serde::Serialize, ::serde::Deserialize, PartialEq, Eq, Hash, Clone, Copy, ::strum::EnumString)]
         #[strum(serialize_all = "snake_case")]
-        pub enum AbilityId {$($ability),*}
+        pub enum AbilityId {$(
+            #[doc = $description]
+            $ability
+        ),*}
         $(
+            #[doc = $description]
             struct $ability;
             impl $ability {
                 fn cast($event: ::bevy::ecs::observer::On<$crate::event::Cast::<$ability>>, $($param: $type),*) $body
@@ -39,13 +52,22 @@ macro_rules! abilities {
                 use ::either::Either;
                 match self {$(
                         Self::$ability => {
-                            $(
+                            Either::<::bevy::time::Timer, bool>::Right(false) $(;
                                 let mut cd = ::bevy::time::Timer::new($cooldown, ::bevy::time::TimerMode::Once);
                                 cd.finish();
-                                Either::Left(cd)
+                                return Either::<::bevy::time::Timer, bool>::Left(cd)
+                            )? $(;
+                                #[allow(unused)]
+                                $ready type T = ();
+                                Either::Right(true)
                             )?
-                            $(Either::Right($ready))?
                         }
+                ),*}
+            }
+
+            fn description(&self) -> String {
+                match self {$(
+                    Self::$ability => $description.into()
                 ),*}
             }
         }

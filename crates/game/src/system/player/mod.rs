@@ -47,7 +47,7 @@ fn volume(mut command: ConsoleCommand<VolumeCommand>, mut volume: ResMut<GlobalV
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "whoami")]
-/// Print the entity ID of the currently controlled player
+/// Print the entity ID of the currently controlled player.
 pub struct WhoAmI;
 
 fn whoami(
@@ -124,7 +124,7 @@ impl Binds for Attack {
     }
 }
 
-/// Adds bindings to an action entity when it spawns
+/// Adds bindings to an action entity when it spawns.
 fn add_bindings_on_action_spawn<A: Binds, Context: Component, Owner: Component>(
     event: On<Insert, (Action<A>, ActionOf<Context>)>,
     actions: Query<&ActionOf<Context>, (With<Action<A>>, Without<Bindings>)>,

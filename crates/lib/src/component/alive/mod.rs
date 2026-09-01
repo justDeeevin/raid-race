@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, Serialize, Deserialize, Deref, Clone, Copy)]
 #[component(immutable)]
-/// Unique identifier for living entities
+/// Unique identifier for living entities.
 pub struct Id(pub u64);
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut, Clone, Default)]
@@ -76,7 +76,8 @@ pub struct Cdr(pub u16);
 impl Cdr {
     /// Returns reduction factor for cooldowns.
     ///
-    /// The max reduction is 30%. The value increases rationally (k = 15) with an asymptote at the max.
+    /// The value increases rationally with an asymptote at the max reduction (see function body for
+    /// const value).
     pub fn scaler(&self) -> f32 {
         const MAX_REDUCTION: f32 = 0.3;
         const HALFWAY_POINT: f32 = 15.0;
@@ -98,7 +99,7 @@ impl Defense {
 }
 
 #[derive(Component, Serialize, Deserialize, Deref, DerefMut)]
-/// A percent between 0 and 100
+/// A percent between 0 and 100.
 pub struct Luck(pub u8);
 
 #[derive(Serialize, Deserialize, Clone, Default)]

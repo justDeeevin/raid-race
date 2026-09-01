@@ -145,4 +145,5 @@ pub fn plugin(app: &mut App) {
         .add_systems(Startup, scene::test.spawn());
 }
 
+/// General-purpose unordered reliable channel for alerts.
 pub struct Channel;

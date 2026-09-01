@@ -50,6 +50,7 @@ impl Character {
 pub enum CharacterData {
     Warrior {
         abilities: Abilities<warrior::AbilityId>,
+        // TODO: bonus damage math from level
         strike_bonus_percent: u8,
         combo_window: Option<Timer>,
         combo_index: Option<usize>,
@@ -81,4 +82,5 @@ impl<T: AbilityId> From<&Abilities<T>> for Cooldowns {
 pub trait AbilityId: std::fmt::Display {
     fn trigger(&self, entity: Entity, commands: &mut Commands);
     fn cooldown(&self) -> Either<Timer, bool>;
+    fn description(&self) -> String;
 }

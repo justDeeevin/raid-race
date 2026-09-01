@@ -48,6 +48,7 @@ pub struct AgilityUp(pub StackableStatusEffect);
 pub struct AgilityDown(pub StackableStatusEffect);
 
 #[derive(Component)]
+// TODO:
 pub struct Blind(pub Timer);
 
 #[derive(Serialize, Deserialize)]

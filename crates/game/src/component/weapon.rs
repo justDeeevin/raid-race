@@ -3,6 +3,7 @@ use rand::seq::IndexedRandom;
 
 #[derive(Component)]
 pub struct WeaponAssets {
+    /// One will be played at random when the player attacks.
     pub sounds: Vec<Handle<AudioSource>>,
 }
 

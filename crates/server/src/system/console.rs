@@ -26,20 +26,20 @@ use tracing::{error, instrument};
 #[derive(Parser)]
 #[command(help_template = "{subcommands}")]
 enum Command {
-    /// Apply poison
+    /// Apply poison.
     Poison(PoisonCommand),
-    /// Choose a character
+    /// Choose a character.
     Character(CharacterCommand),
-    /// Slot an ability
+    /// Slot an ability.
     Slot(SlotCommand),
-    /// Equip a weapon
+    /// Equip a weapon.
     Weapon(WeaponCommand),
-    /// Set health
+    /// Set health.
     Health(HealthCommand),
-    /// Quit
+    /// Quit.
     Quit {
         #[arg(default_value_t)]
-        /// The exit code
+        /// The exit code.
         code: u8,
     },
 }
@@ -47,12 +47,12 @@ enum Command {
 #[derive(Event, Args)]
 struct HealthCommand {
     #[arg()]
-    /// The id of the entity to choose
+    /// The id of the entity to choose.
     target: u64,
     #[arg(value_parser = |s: &str| if s == "max" {Ok(HealthInput::Max)} else {s.parse().map(HealthInput::Amount)})]
-    /// The target health
+    /// The target health.
     ///
-    /// Either a number or "max"
+    /// Either a number or "max".
     amount: HealthInput,
 }
 
@@ -82,10 +82,10 @@ fn health(event: On<HealthCommand>, mut healths: Query<(&Id, &mut Health)>) {
 #[derive(Event, Args)]
 struct WeaponCommand {
     #[arg()]
-    /// The id of the entity to choose
+    /// The id of the entity to choose.
     target: u64,
     #[arg(value_enum)]
-    /// The weapon to choose
+    /// The weapon to choose.
     weapon: Weapon,
 }
 
@@ -107,10 +107,10 @@ fn weapon(event: On<WeaponCommand>, players: Query<(&Id, Entity)>, mut commands:
 #[derive(Event, Args)]
 struct CharacterCommand {
     #[arg()]
-    /// The id of the entity to choose
+    /// The id of the entity to choose.
     target: u64,
     #[arg(value_enum)]
-    /// The name of the character to choose
+    /// The name of the character to choose.
     character: CharacterName,
 }
 
@@ -140,13 +140,13 @@ fn character(event: On<CharacterCommand>, players: Query<(&Id, Entity)>, mut com
 #[derive(Event, Args)]
 struct SlotCommand {
     #[arg()]
-    /// The id of the entity to slot
+    /// The id of the entity to choose.
     target: u64,
     #[arg()]
-    /// The name of the ability to slot
+    /// The name of the ability to slot.
     ability: String,
     #[arg()]
-    /// The slot to fill
+    /// The slot to fill.
     slot: usize,
 }
 
@@ -208,13 +208,13 @@ fn slot(
 #[derive(Event, Args)]
 struct PoisonCommand {
     #[arg()]
-    /// The id of the entity to poison
+    /// The id of the entity to choose.
     target: u64,
     #[arg()]
-    /// The id of the source of the poison
+    /// The id of the source of the poison.
     source: u64,
     #[arg(value_parser = |s: &str| s.parse::<f32>().map(Duration::from_secs_f32))]
-    /// The duration of the poison in seconds (decimals accepted)
+    /// The duration of the poison in seconds (decimals accepted).
     duration: Duration,
 }
 

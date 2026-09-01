@@ -48,6 +48,7 @@ abilities! {
                 }
             }
         },
+        description: "Attack with additional damage and reset attack cooldown.",
         cooldown: Duration::from_secs(5),
     },
     StrikeCombo {
@@ -63,9 +64,10 @@ abilities! {
                 commands.trigger(Attacked(**event));
             }
         },
+        description: "Can be cast within a short window of casting Strike.\nAttack twice, each with additional strike damage, and reset attack cooldown.",
         name: "Strike Combo",
-        ready: false,
     },
+    // TODO: should channel?
     Spin {
         cast: (event, mut characters| Query<&mut Character>) {
             const DURATION: Duration = Duration::from_secs(1);
@@ -78,26 +80,28 @@ abilities! {
                 *spin = Some((0, timer));
             }
         },
+        description: "Spin in place, dealing damage to nearby enemies.",
         cooldown: Duration::from_secs(10),
     },
     Meditate {
         cast: (event, mut characters| Query<&mut Character>) {
-            const CHANNEL_DURATION: Duration = Duration::from_millis(2500);
+            const DURATION: Duration = Duration::from_millis(2500);
             const N_TICKS: u32 = 5;
 
             if let Ok(mut character) = characters.get_mut(**event)
             {
                 let prev = character.channel.take();
 
-                character.channel = Some(Timer::new(CHANNEL_DURATION, TimerMode::Once));
+                character.channel = Some(Timer::new(DURATION, TimerMode::Once));
 
                 if let CharacterData::Warrior { meditate, .. } = &mut character.data {
-                    *meditate = Some(Timer::new(CHANNEL_DURATION / N_TICKS, TimerMode::Repeating))
+                    *meditate = Some(Timer::new(DURATION / N_TICKS, TimerMode::Repeating))
                 } else {
                     character.channel = prev;
                 }
             }
         },
+        description: "Channel to heal a fraction of your maximum health.",
         cooldown: Duration::from_secs(10),
     },
     Kick {
@@ -108,11 +112,11 @@ abilities! {
             mut targets| Query<(&mut Health, &Defense), With<Agility>>,
             mut commands| Commands
         ) {
-            const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
             #[allow(clippy::unwrap_used, reason = "const")]
-            const STACKS: NonZero<u8> = NonZero::new(40).unwrap();
-            const DURATION: Duration = Duration::from_secs(5);
+            const AGILITY_DOWN_STACKS: NonZero<u8> = NonZero::new(40).unwrap();
+            const DEBUFF_DURATION: Duration = Duration::from_secs(5);
             const DAMAGE: u16 = 6;
+            const HITBOX_DIMENSIONS: Vector = Vector::new(0.5, 0.1, 0.25);
 
             if let Ok((position, rotation)) = params.get(**event) {
                 for hit in space.shape_intersections(
@@ -127,12 +131,13 @@ abilities! {
                 ) {
                     if let Ok((mut health, defense)) = targets.get_mut(hit) {
                         commands.entity(hit)
-                            .insert(AgilityDown(StackableStatusEffect::new(STACKS, DURATION)));
+                            .insert(AgilityDown(StackableStatusEffect::new(AGILITY_DOWN_STACKS, DEBUFF_DURATION)));
                         health.damage(DAMAGE, **defense);
                     }
                 }
             }
         },
+        description: "Swipe an area in front of your feet, damaging and decreasing the agility of those hit.",
         cooldown: Duration::from_secs(10),
     },
     Leap {
@@ -141,6 +146,7 @@ abilities! {
                 **velocity += **rotation * Vector::new(0.0, 6.0, -8.0);
             }
         },
+        description: "Leap into the air.",
         cooldown: Duration::from_secs(10),
     },
     Trance {
@@ -166,6 +172,7 @@ abilities! {
 
             }
         },
+        description: "Enter a trance state, increasing your damage and decreasing your attack cooldown. You cannot fall below 5% of your maximum health while entranced.",
         name: "Battle Trance",
         cooldown: Duration::from_secs(10),
     },
@@ -177,7 +184,7 @@ abilities! {
             space| SpatialQuery,
             mut commands| Commands
         ) {
-            const DURATION: Duration = Duration::from_secs(2);
+            const DEBUFF_DURATION: Duration = Duration::from_secs(2);
 
             const START_WIDTH: Scalar = 1.0;
             const END_WIDTH: Scalar = 1.0;
@@ -215,12 +222,13 @@ abilities! {
                         commands.entity(hit)
                             .insert(DefenseDown(StackableStatusEffect::new(
                                 NonZero::new(((**defense as f32 * 0.15) as u8).max(1)).unwrap(),
-                                DURATION
+                                DEBUFF_DURATION
                             )));
                     }
                 }
             }
         },
+        description: "Temporarily decrease the defense of enemies in a cone in front of you.",
         cooldown: Duration::from_secs(10),
     },
 }
@@ -352,6 +360,8 @@ fn trance(characters: Query<(&mut Character, &mut Health, &mut AttackCooldown)>,
             }
         }
     }
+
+    pub type Thing = ();
 }
 
 pub fn plugin(app: &mut App) {

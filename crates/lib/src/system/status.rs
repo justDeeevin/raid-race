@@ -85,6 +85,7 @@ pub fn plugin(app: &mut App) {
             stat_change::<AgilityDown>,
         ),
     )
+    // TODO: maybe make this less ugly
     .add_observer(on_add::<false, DefenseUp, Defense>)
     .add_observer(on_remove::<false, DefenseUp, Defense>)
     .add_observer(on_add::<true, DefenseDown, Defense>)

@@ -19,7 +19,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "connect")]
-/// Connect to a server
+/// Connect to a server.
 struct ConnectCommand {
     #[arg()]
     /// The address of the server.
@@ -31,14 +31,18 @@ struct ConnectCommand {
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "disconnect")]
-/// Disconnect from the current server
+/// Disconnect from the current server.
 struct DisconnectCommand;
 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "auth")]
-/// Set the address of the auth server
+/// Set the address of the auth server.
 struct AuthCommand {
     #[arg()]
+    /// The address of the server.
+    ///
+    /// This does not require a port number, but will accept one if
+    /// specified.
     address: String,
 }
 
