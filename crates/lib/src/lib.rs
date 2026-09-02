@@ -25,15 +25,10 @@ use lightyear::{
         *,
     },
 };
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    sync::LazyLock,
-    time::Duration,
-};
+use std::{sync::LazyLock, time::Duration};
 use totp_rs::{Builder, Totp};
 
 pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
-pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 pub const GAME_PORT: u16 = 5000;
 pub const AUTH_PORT: u16 = 4000;
 pub const ID_PORT: u16 = 4001;
@@ -96,7 +91,7 @@ pub fn plugin(app: &mut App) {
         Id,
         Luck,
         Mana,
-        Pitch,
+        NoCD,
         Player,
         Poison,
         Weapon,
@@ -104,7 +99,7 @@ pub fn plugin(app: &mut App) {
 
     app.component::<Cooldowns>().replicate_once();
     app.component::<AttackCooldown>().replicate_once();
-    app.component::<Pitch>().predict();
+    app.component::<Pitch>().replicate().predict();
 
     app.add_plugins(InputPlugin::<Player>::default())
         .register_input_action::<Walk>()
@@ -123,20 +118,18 @@ pub fn plugin(app: &mut App) {
         LightyearAvianPlugin::default(),
         PhysicsPlugins::default()
             .build()
+            // Handled by lightyear integration
             .disable::<PhysicsTransformPlugin>()
             .disable::<PhysicsInterpolationPlugin>()
             .disable::<IslandPlugin>()
             .disable::<IslandSleepingPlugin>(),
     ));
 
-    app.register_message::<Attacked>()
-        .add_direction(NetworkDirection::ServerToClient)
-        .add_map_entities();
+    app.register_event::<Attacked>()
+        .add_map_entities()
+        .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<Slotted>()
-        .add_direction(NetworkDirection::ServerToClient)
-        .add_map_entities();
-    app.init_resource::<NoCD>()
-        .register_message::<NoCD>()
+        .add_map_entities()
         .add_direction(NetworkDirection::ServerToClient);
     app.add_channel::<Channel>(ChannelSettings {
         mode: ChannelMode::UnorderedReliable(Default::default()),

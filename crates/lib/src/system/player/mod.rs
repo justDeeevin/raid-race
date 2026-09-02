@@ -160,13 +160,15 @@ fn dummy(health: Query<&mut Health, With<Dummy>>) {
     }
 }
 
-fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>, no_cd: Res<NoCD>) {
+fn ability_cooldown(cooldowns: Query<&mut Cooldowns>, time: Res<Time>, no_cd: Option<Res<NoCD>>) {
     for mut cooldowns in cooldowns {
         for cooldown in &mut **cooldowns {
             if let Either::Left(timer) = cooldown
                 && !timer.is_finished()
             {
-                if **no_cd {
+                if let Some(no_cd) = &no_cd
+                    && ***no_cd
+                {
                     timer.finish()
                 } else {
                     timer.tick(time.delta());

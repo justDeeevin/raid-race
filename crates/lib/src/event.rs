@@ -2,14 +2,8 @@ use bevy::{ecs::entity::MapEntities, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-#[derive(EntityEvent, Deref, Serialize, Deserialize, Clone)]
-pub struct Attacked(pub Entity);
-
-impl MapEntities for Attacked {
-    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
-        self.0.map_entities(entity_mapper);
-    }
-}
+#[derive(EntityEvent, MapEntities, Deref, Serialize, Deserialize, Clone)]
+pub struct Attacked(#[entities] pub Entity);
 
 #[derive(Event)]
 pub struct Hit {
@@ -33,17 +27,12 @@ impl<T> Cast<T> {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(MapEntities, Serialize, Deserialize, Clone)]
 pub struct Slotted {
+    #[entities]
     pub entity: Entity,
     pub index: usize,
 }
 
-impl MapEntities for Slotted {
-    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
-        self.entity.map_entities(entity_mapper);
-    }
-}
-
-#[derive(Resource, Event, Serialize, Deserialize, Deref, DerefMut, Clone, Copy, Default)]
+#[derive(Resource, Serialize, Deserialize, Deref, DerefMut, Default)]
 pub struct NoCD(pub bool);

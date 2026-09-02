@@ -50,21 +50,6 @@ enum Command {
     },
 }
 
-fn no_cd(
-    event: On<NoCD>,
-    mut no_cd: ResMut<NoCD>,
-    mut tx: ServerMultiMessageSender,
-    server: Single<&Server>,
-) {
-    *no_cd = *event;
-    #[allow(
-        clippy::unwrap_used,
-        reason = "should never fail because channel is reliable"
-    )]
-    tx.send::<_, Channel>(&*event, &server, &Target::All)
-        .unwrap();
-}
-
 #[derive(Event, Args)]
 struct HealthCommand {
     #[arg()]
@@ -346,23 +331,24 @@ fn thread(tx: Sender<Command>) -> impl FnOnce() {
 fn handle(mut rx: SyncCell<Receiver<Command>>, app: &mut App) {
     app.add_systems(
         Update,
-        move |mut commands: Commands, mut writer: MessageWriter<AppExit>, no_cd: Res<NoCD>| match rx
-            .get()
-            .try_recv()
-        {
-            Ok(Command::Poison(cmd)) => commands.trigger(cmd),
-            Ok(Command::Slot(cmd)) => commands.trigger(cmd),
-            Ok(Command::Character(cmd)) => commands.trigger(cmd),
-            Ok(Command::Weapon(cmd)) => commands.trigger(cmd),
-            Ok(Command::Health(cmd)) => commands.trigger(cmd),
-            Ok(Command::Quit { code }) => {
-                writer.write(AppExit::from_code(code));
+        move |mut commands: Commands,
+              mut writer: MessageWriter<AppExit>,
+              mut no_cd: ResMut<NoCD>| {
+            match rx.get().try_recv() {
+                Ok(Command::Poison(cmd)) => commands.trigger(cmd),
+                Ok(Command::Slot(cmd)) => commands.trigger(cmd),
+                Ok(Command::Character(cmd)) => commands.trigger(cmd),
+                Ok(Command::Weapon(cmd)) => commands.trigger(cmd),
+                Ok(Command::Health(cmd)) => commands.trigger(cmd),
+                Ok(Command::Quit { code }) => {
+                    writer.write(AppExit::from_code(code));
+                }
+                Ok(Command::NoCD { enable }) => match enable {
+                    Some(enable) => **no_cd = enable,
+                    None => info!(nocd = **no_cd),
+                },
+                Err(_) => {}
             }
-            Ok(Command::NoCD { enable }) => match enable {
-                Some(enable) => commands.trigger(NoCD(enable)),
-                None => info!(no_cd = **no_cd),
-            },
-            Err(_) => {}
         },
     );
 }
@@ -378,6 +364,5 @@ pub fn plugin(app: &mut App) {
         .add_observer(slot)
         .add_observer(weapon)
         .add_observer(health)
-        .add_observer(character)
-        .add_observer(no_cd);
+        .add_observer(character);
 }

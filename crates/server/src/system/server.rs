@@ -10,8 +10,12 @@ use lightyear::{
     prelude::{server::ServerPlugins, *},
     webtransport::server::WebTransportServerIo,
 };
-use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, SERVER_ADDR, TICK_PERIOD, TOTP};
-use std::{collections::HashSet, net::SocketAddr, sync::Arc};
+use raid_race_lib::{GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, TICK_PERIOD, TOTP};
+use std::{
+    collections::HashSet,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 use wtransport::tls::{Certificate, CertificateChain, PrivateKey};
 
 #[derive(Resource, Deref, DerefMut, Default)]
@@ -25,7 +29,10 @@ fn serve(mut commands: Commands, ids: Res<ClientIds>) {
                     .with_protocol_id(PROTOCOL_ID)
                     .with_key(PRIVATE_KEY),
             ),
-            LocalAddr(SocketAddr::new(SERVER_ADDR, GAME_PORT)),
+            LocalAddr(SocketAddr::new(
+                IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                GAME_PORT,
+            )),
             WebTransportServerIo {
                 certificate: Identity::new(
                     CertificateChain::single(
@@ -49,7 +56,7 @@ async fn id_server(ids: Arc<RwLock<HashSet<u64>>>) {
         totp: String,
     }
 
-    let socket = TcpListener::bind(SocketAddr::new(SERVER_ADDR, ID_PORT))
+    let socket = TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ID_PORT))
         .await
         .expect("failed to bind to socket");
 
