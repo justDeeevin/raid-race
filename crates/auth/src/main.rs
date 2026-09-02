@@ -2,17 +2,20 @@ use axum::{Router, extract::Path, routing::get};
 use bytes::Buf;
 use futures::future::TryFutureExt;
 use lightyear_netcode::ConnectToken;
-use raid_race_lib::{AUTH_PORT, GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, SERVER_ADDR, TOTP};
+use raid_race_lib::{AUTH_PORT, GAME_PORT, ID_PORT, PRIVATE_KEY, PROTOCOL_ID, TOTP};
 use reqwest::Response;
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
     let app = Router::default().route("/{server}", get(auth));
-    let socket = TcpListener::bind(SocketAddr::new(SERVER_ADDR, AUTH_PORT))
-        .await
-        .expect("failed to bind to socket");
+    let socket = TcpListener::bind(SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+        AUTH_PORT,
+    ))
+    .await
+    .expect("failed to bind to socket");
     axum::serve(socket, app).await.expect("failed to serve");
 }
 

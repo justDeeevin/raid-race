@@ -25,15 +25,10 @@ use lightyear::{
         *,
     },
 };
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    sync::LazyLock,
-    time::Duration,
-};
+use std::{sync::LazyLock, time::Duration};
 use totp_rs::{Builder, Totp};
 
 pub const TICK_PERIOD: Duration = Duration::from_nanos(7812500); // 128 Hz
-pub const SERVER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 pub const GAME_PORT: u16 = 5000;
 pub const AUTH_PORT: u16 = 4000;
 pub const ID_PORT: u16 = 4001;
@@ -123,18 +118,21 @@ pub fn plugin(app: &mut App) {
         LightyearAvianPlugin::default(),
         PhysicsPlugins::default()
             .build()
+            // Handled by lightyear integration
             .disable::<PhysicsTransformPlugin>()
             .disable::<PhysicsInterpolationPlugin>()
             .disable::<IslandPlugin>()
             .disable::<IslandSleepingPlugin>(),
     ));
 
+    // TODO: can this be done with register_event?
     app.register_message::<Attacked>()
         .add_direction(NetworkDirection::ServerToClient)
         .add_map_entities();
     app.register_message::<Slotted>()
         .add_direction(NetworkDirection::ServerToClient)
         .add_map_entities();
+    // TODO: this should be able to be done with resource method
     app.init_resource::<NoCD>()
         .register_message::<NoCD>()
         .add_direction(NetworkDirection::ServerToClient);
