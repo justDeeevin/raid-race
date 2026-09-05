@@ -179,7 +179,7 @@ fn spawn(
 
     commands
         .entity(event.entity)
-        .apply_scene(bsn!(
+        .apply_scene(bsn! {
             #Player
             Mesh3d(asset_value(Capsule3d::new(
                 PLAYER_RADIUS as f32,
@@ -192,7 +192,7 @@ fn spawn(
                 MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
                 Transform::from_xyz(0.0, PLAYER_CAPSULE_LENGTH as f32 / 2.0, -NOSE_LENGTH)
             ]
-        ))
+        })
         .insert(physics_components());
 
     if controlled.get(event.entity).is_ok() {

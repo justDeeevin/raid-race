@@ -1,8 +1,6 @@
 use bevy::{platform::cell::SyncCell, prelude::*};
 use clap::{ArgAction, Args, Parser, error::ErrorKind};
-use lightyear::{
-    connection::network_target::Target, link::server::Server, prelude::ServerMultiMessageSender,
-};
+use lightyear::prelude::*;
 use raid_race_lib::{
     Channel,
     component::alive::{
@@ -231,7 +229,7 @@ fn slot(
             index: event.slot - 1,
         },
         &server,
-        &Target::All,
+        &NetworkTarget::All,
     )
     .unwrap();
 }

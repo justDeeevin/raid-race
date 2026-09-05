@@ -1,8 +1,11 @@
+use crate::cli::Args;
 use bevy::prelude::*;
-use lightyear::{connection::network_target::Target, prelude::*};
+use lightyear::prelude::*;
 use raid_race_lib::{
     Channel,
+    component::alive::player::Player,
     event::{Attacked, NoCD},
+    system::player::{PLAYER_CAPSULE_LENGTH, PLAYER_RADIUS},
 };
 
 fn alert_attack(
@@ -25,8 +28,18 @@ fn alert_attack(
     }
 }
 
+fn spawn_visual(event: On<Add, Player>, args: Res<Args>, mut commands: Commands) {
+    if args.visual {
+        commands.entity(event.entity).apply_scene(bsn! {
+            Mesh3d(asset_value(Capsule3d::new(PLAYER_RADIUS as f32, PLAYER_CAPSULE_LENGTH as f32)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        });
+    }
+}
+
 pub fn plugin(app: &mut App) {
-    app.register_required_components_with::<NoCD, _>(|| Replicate::to_clients(Target::All))
+    app.register_required_components_with::<NoCD, _>(|| Replicate::to_clients(NetworkTarget::All))
         .init_resource::<NoCD>()
+        .add_observer(spawn_visual)
         .add_observer(alert_attack);
 }

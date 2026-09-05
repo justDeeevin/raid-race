@@ -87,6 +87,7 @@ impl Player {
             },
             Replicate::to_clients(NetworkTarget::All),
             PredictionTarget::to_clients(NetworkTarget::Single(id)),
+            InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(id)),
         ))
     }
 }
